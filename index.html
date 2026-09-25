@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PGIMER Articulation Assessment</title>
+    <title>PGIMER Articulation Assessment - Varnamala Mode</title>
     <style>
         :root { 
             --primary: #0284c7; 
             --bg: #f8fafc; 
             --text: #0f172a; 
             --target-accent: #f59e0b;
-            --highlight-color: #dc2626; /* High-contrast red for phoneme evaluation */
+            --highlight-color: #dc2626; /* Vivid red for target phone */
         }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 450px; background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); box-sizing: border-box; }
@@ -61,7 +61,7 @@
 <div class="container">
     <div id="sessionDisplay" class="session-info"></div>
 
-    <div style="text-align:center; font-size:0.75rem; font-weight:bold; color:#64748b; margin-bottom:10px;" id="counter">ITEM 1 / 82</div>
+    <div style="text-align:center; font-size:0.75rem; font-weight:bold; color:#64748b; margin-bottom:10px;" id="counter">ITEM 1 / 108</div>
 
     <div class="stimulus-box" id="mainDisplay">
         <div id="regForm" class="registration-box">
@@ -102,115 +102,200 @@
 <script>
     const assessmentList = [
         { type: "header", word: "VOWELS" },
+        // /ə/ (अ)
         { word: "<span class='highlight-target'>अ</span>नार", img: "anar.jpg", targetKey: "अ (Initial)" }, 
-        { word: "<span class='highlight-target'>आ</span>म", img: "aam.jpg", targetKey: "आ (Initial)" },
         { word: "म<span class='highlight-target'>ट</span>र", img: "matar.jpg", targetKey: "अ (Medial)" }, 
         { word: "ब<span class='highlight-target'>स</span>", img: "bas.jpg", targetKey: "अ (Final Schwa)" },
+
+        // /a:/ (आ)
+        { word: "<span class='highlight-target'>आ</span>म", img: "aam.jpg", targetKey: "आ (Initial)" },
         { word: "छा<span class='highlight-target'>ता</span>", img: "chhata.jpg", targetKey: "आ (Final)" }, 
+
+        // /i/ (इ)
         { word: "<span class='highlight-target'>इ</span>मली", img: "imli.jpg", targetKey: "इ (Initial)" },
-        { word: "ब<span class='highlight-target'>गी</span>चा", img: "bagicha.jpg", targetKey: "ई (Medial)" }, 
         { word: "त<span class='highlight-target'>कि</span>या", img: "takiya.jpg", targetKey: "इ (Medial)" },
-        { word: "ज<span class='highlight-target'>ले</span>बी", img: "jalebi.jpg", targetKey: "ए (Medial)" }, 
+
+        // /i:/ (ई)
         { word: "<span class='highlight-target'>ती</span>न", img: "teen.jpg", targetKey: "ई (Medial)" },
+        { word: "ब<span class='highlight-target'>गी</span>चा", img: "bagicha.jpg", targetKey: "ई (Medial Alt)" }, 
+
+        // /u/ (उ)
         { word: "<span class='highlight-target'>उ</span>ल्लू", img: "ullu.jpg", targetKey: "उ (Initial)" }, 
         { word: "सा<span class='highlight-target'>बु</span>न", img: "sabun.jpg", targetKey: "उ (Medial)" },
-        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar.jpg", targetKey: "ऊ (Medial)" }, 
         { word: "सा<span class='highlight-target'>धु</span>", img: "sadhu.jpg", targetKey: "उ (Final)" },
-        { word: "भा<span class='highlight-target'>लू</span>", img: "bhalu.jpg", targetKey: "ऊ (Final)" }, 
+
+        // /u:/ & /ũ:/ (ऊ / ऊँ)
         { word: "<span class='highlight-target'>ऊँ</span>ट", img: "oont.jpg", targetKey: "ऊँ (Anunasika Initial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar.jpg", targetKey: "ऊ (Medial)" }, 
+        { word: "भा<span class='highlight-target'>लू</span>", img: "bhalu.jpg", targetKey: "ऊ (Final)" }, 
+
+        // /e:/ (ए)
         { word: "पे<span class='highlight-target'>ड़</span>", img: "ped.jpg", targetKey: "ए (Medial)" }, 
-        { word: "<span class='highlight-target'>ओ</span>खली", img: "okhli.jpg", targetKey: "ओ (Initial)" },
+        { word: "ज<span class='highlight-target'>ले</span>बी", img: "jalebi.jpg", targetKey: "ए (Medial Alt)" }, 
         { word: "गुब्बा<span class='highlight-target'>रे</span>", img: "gubbare.jpg", targetKey: "ए (Final)" }, 
-        { word: "स<span class='highlight-target'>मो</span>सा", img: "samosa.jpg", targetKey: "ओ (Medial)" },
+
+        // /æ:/ (ऐ)
         { word: "<span class='highlight-target'>ऐ</span>नक", img: "ainak.jpg", targetKey: "ऐ (Initial)" }, 
+
+        // /o:/ (ओ)
+        { word: "<span class='highlight-target'>ओ</span>खली", img: "okhli.jpg", targetKey: "ओ (Initial)" },
+        { word: "स<span class='highlight-target'>मो</span>सा", img: "samosa.jpg", targetKey: "ओ (Medial)" },
+
+        // /ɔ:/ (औ)
         { word: "क<span class='highlight-target'>ौ</span>आ", img: "kaua.jpg", targetKey: "औ (Medial)" },
+        { word: "खि<span class='highlight-target'>लौ</span>ना", img: "khilona.jpg", targetKey: "औ (Medial Alt)" },
+
+        // /əŋ/ (अं)
         { word: "<span class='highlight-target'>अं</span>गूर", img: "angoor.jpg", targetKey: "अं (Anusvara Initial)" }, 
-        { word: "खि<span class='highlight-target'>लौ</span>ना", img: "khilona.jpg", targetKey: "औ (Medial)" },
         { word: "प<span class='highlight-target'>तं</span>ग", img: "patang.jpg", targetKey: "अं (Anusvara Medial)" },
-        
+
         { type: "header", word: "CONSONANTS" },
-        { word: "<span class='highlight-target'>क</span>मल", img: "kamal.jpg", targetKey: "क (Initial)" }, 
+        // /k/ (क)
+        { word: "<span class='highlight-target'>क</span>मल", img: "kamal.jpg", targetKey: "क (Initial)" },
+        { word: "ब<span class='highlight-target'>क</span>री", img: "bakri.jpg", targetKey: "क (Medial)" },
+        { word: "मेंढ<span class='highlight-target'>क</span>", img: "mendhak_02.jpg", targetKey: "क (Final)" },
+        
+        // /kh/ (ख)
         { word: "<span class='highlight-target'>ख</span>रगोश", img: "khargosh.jpg", targetKey: "ख (Initial)" },
-        { word: "ब<span class='highlight-target'>क</span>री", img: "bakri.jpg", targetKey: "क (Medial)" }, 
         { word: "ओ<span class='highlight-target'>ख</span>ली", img: "okhli_02.jpg", targetKey: "ख (Medial)" },
-        { word: "में<span class='highlight-target'>ढ</span>क", img: "mendhak.jpg", targetKey: "ढ (Medial)" }, 
         { word: "बत्त<span class='highlight-target'>ख</span>", img: "battakh.jpg", targetKey: "ख (Final)" },
-        { word: "<span class='highlight-target'>गा</span>जर", img: "gajar.jpg", targetKey: "ग (Initial)" }, 
+        
+        // /g/ (ग)
+        { word: "<span class='highlight-target'>गा</span>जर", img: "gajar.jpg", targetKey: "ग (Initial)" },
         { word: "म<span class='highlight-target'>ग</span>रमच्छ", img: "magarmachh.jpg", targetKey: "ग (Medial)" },
-        { word: "<span class='highlight-target'>घा</span>घरा", img: "ghaghra.jpg", targetKey: "घ (Initial)" }, 
         { word: "पतं<span class='highlight-target'>ग</span>", img: "patang_02.jpg", targetKey: "ग (Final)" },
-        { word: "कं<span class='highlight-target'>घा</span>", img: "kanghi.jpg", targetKey: "घ (Medial)" }, 
+        
+        // /gh/ (घ)
+        { word: "<span class='highlight-target'>घा</span>घरा", img: "ghaghra.jpg", targetKey: "घ (Initial)" },
+        { word: "कं<span class='highlight-target'>घा</span>", img: "kanghi.jpg", targetKey: "घ (Medial)" },
+        
+        // /ch/ (च)
         { word: "<span class='highlight-target'>च</span>प्पल", img: "chappal.jpg", targetKey: "च (Initial)" },
-        { word: "<span class='highlight-target'>छा</span>ता", img: "chhata_02.jpg", targetKey: "छ (Initial)" }, 
         { word: "ना<span class='highlight-target'>च</span>ना", img: "nachna.jpg", targetKey: "च (Medial)" },
-        { word: "म<span class='highlight-target'>छ</span>ली", img: "machhli.jpg", targetKey: "छ (Medial)" }, 
         { word: "ब<span class='highlight-target'>च्चा</span>", img: "bachcha.jpg", targetKey: "च्च (Geminates)" },
-        { word: "मगरम<span class='highlight-target'>च्छ</span>", img: "magarmachh_02.jpg", targetKey: "छ (Final)" }, 
+        
+        // /chh/ (छ)
+        { word: "<span class='highlight-target'>छा</span>ता", img: "chhata_02.jpg", targetKey: "छ (Initial)" },
+        { word: "म<span class='highlight-target'>छ</span>ली", img: "machhli.jpg", targetKey: "छ (Medial)" },
+        { word: "मगरम<span class='highlight-target'>च्छ</span>", img: "magarmachh_02.jpg", targetKey: "छ (Final)" },
+        
+        // /j/ (ज)
         { word: "<span class='highlight-target'>ज</span>हाज", img: "jahaj.jpg", targetKey: "ज (Initial)" },
-        { word: "<span class='highlight-target'>झं</span>डा", img: "jhanda.jpg", targetKey: "झ (Initial)" }, 
         { word: "गा<span class='highlight-target'>ज</span>र", img: "gajar_02.jpg", targetKey: "ज (Medial)" },
-        { word: "<span class='highlight-target'>ट</span>माटर", img: "tamatar.jpg", targetKey: "ट (Initial)" }, 
+        
+        // /jh/ (झ)
+        { word: "<span class='highlight-target'>झं</span>डा", img: "jhanda.jpg", targetKey: "झ (Initial)" },
+        
+        // /t/ (ट)
+        { word: "<span class='highlight-target'>ट</span>माटर", img: "tamatar.jpg", targetKey: "ट (Initial)" },
         { word: "ब<span class='highlight-target'>ट</span>न", img: "button.jpg", targetKey: "ट (Medial)" },
-        { word: "ऊँ<span class='highlight-target'>ट</span>", img: "oont_02.jpg", targetKey: "ट (Final)" }, 
+        { word: "ऊँ<span class='highlight-target'>ट</span>", img: "oont_02.jpg", targetKey: "ट (Final)" },
+        
+        // /th/ (ठ)
+        { word: "<span class='highlight-target'>ठ</span>ठेरा", img: "damaru.jpg", targetKey: "ठ (Initial)" },
+        { word: "मि<span class='highlight-target'>ठा</span>ई", img: "mithai.jpg", targetKey: "ठ (Medial)" },
         { word: "अंगू<span class='highlight-target'>ठी</span>", img: "anguthi.jpg", targetKey: "ठ (Final)" },
+        
+        // /d/ (ड)
         { word: "<span class='highlight-target'>ड</span>मरू", img: "damaru.jpg", targetKey: "ड (Initial)" },
-        { word: "मि<span class='highlight-target'>ठा</span>ई", img: "mithai.jpg", targetKey: "ठ (Medial)" }, 
         { word: "झं<span class='highlight-target'>डा</span>", img: "jhanda_02.jpg", targetKey: "ड (Medial)" },
-        { word: "<span class='highlight-target'>ढो</span>लक", img: "dholak.jpg", targetKey: "ढ (Initial)" }, 
+        
+        // /dh/ (ढ)
+        { word: "<span class='highlight-target'>ढो</span>लक", img: "dholak.jpg", targetKey: "ढ (Initial)" },
+        { word: "में<span class='highlight-target'>ढ</span>क", img: "mendhak.jpg", targetKey: "ढ (Medial)" },
+        
+        // /t/ (त)
+        { word: "<span class='highlight-target'>त</span>लवार", img: "talwar.jpg", targetKey: "त (Initial)" },
         { word: "ब<span class='highlight-target'>त्त</span>ख", img: "battakh_02.jpg", targetKey: "त (Medial Geminate)" },
-        { word: "मेंढ<span class='highlight-target'>क</span>", img: "mendhak_02.jpg", targetKey: "क (Final)" }, 
-        { word: "<span class='highlight-target'>दां</span>त", img: "daant.jpg", targetKey: "द (Initial)" },
-        { word: "<span class='highlight-target'>त</span>लवार", img: "talwar.jpg", targetKey: "त (Initial)" }, 
+        
+        // /th/ (थ)
         { word: "<span class='highlight-target'>थ</span>रमस", img: "tharmas.jpg", targetKey: "थ (Initial)" },
-        { word: "ह<span class='highlight-target'>थे</span>ली", img: "hatheli.jpg", targetKey: "थ (Medial)" }, 
+        { word: "ह<span class='highlight-target'>थे</span>ली", img: "hatheli.jpg", targetKey: "थ (Medial)" },
+        { word: "हा<span class='highlight-target'>थी</span>", img: "haathi.jpg", targetKey: "थ (Final)" },
+        
+        // /d/ (द)
+        { word: "<span class='highlight-target'>दां</span>त", img: "daant.jpg", targetKey: "द (Initial)" },
         { word: "म<span class='highlight-target'>दा</span>री", img: "madari.jpg", targetKey: "द (Medial)" },
-        { word: "हा<span class='highlight-target'>थी</span>", img: "haathi.jpg", targetKey: "थ (Final)" }, 
         { word: "अमरु<span class='highlight-target'>द</span>", img: "amrud.jpg", targetKey: "द (Final)" },
-        { word: "<span class='highlight-target'>ध</span>नुष", img: "dhanush.jpg", targetKey: "ध (Initial)" }, 
+        
+        // /dh/ (ध)
+        { word: "<span class='highlight-target'>ध</span>नुष", img: "dhanush.jpg", targetKey: "ध (Initial)" },
         { word: "ग<span class='highlight-target'>धा</span>", img: "gadha.jpg", targetKey: "ध (Medial)" },
-        { word: "का<span class='highlight-target'>न</span>", img: "kaan.jpg", targetKey: "न (Final)" }, 
+        
+        // /n/ (न)
         { word: "<span class='highlight-target'>न</span>ल", img: "nal.jpg", targetKey: "न (Initial)" },
-        { word: "प<span class='highlight-target'>पी</span>ता", img: "papita.jpg", targetKey: "प (Medial)" }, 
         { word: "ऐ<span class='highlight-target'>न</span>क", img: "ainak_02.jpg", targetKey: "न (Medial)" },
-        { word: "च<span class='highlight-target'>प्प</span>ल", img: "chappal_02.jpg", targetKey: "प्प (Geminates)" }, 
+        { word: "का<span class='highlight-target'>न</span>", img: "kaan.jpg", targetKey: "न (Final)" },
+        
+        // /p/ (प)
+        { word: "प<span class='highlight-target'>पी</span>ता", img: "papita.jpg", targetKey: "प (Medial)" },
+        { word: "च<span class='highlight-target'>प्प</span>ल", img: "chappal_02.jpg", targetKey: "प्प (Geminates)" },
         { word: "सां<span class='highlight-target'>प</span>", img: "saamp.jpg", targetKey: "प (Final)" },
-        { word: "सो<span class='highlight-target'>फ़ा</span>", img: "sofa.jpg", targetKey: "फ (Medial)" }, 
-        { word: "<span class='highlight-target'>बैं</span>गन", img: "baingan.jpg", targetKey: "ब (Initial)" }, 
+        
+        // /ph/ (फ)
+        { word: "<span class='highlight-target'>फू</span>ल", img: "phool.jpg", targetKey: "फ (Initial)" },
         { word: "ढ<span class='highlight-target'>फ</span>ली", img: "dafli.jpg", targetKey: "फ (Medial)" },
-        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar_02.jpg", targetKey: "ब (Medial)" }, 
+        { word: "सो<span class='highlight-target'>फ़ा</span>", img: "sofa.jpg", targetKey: "फ (Medial Fricative)" },
+        
+        // /b/ (ब)
+        { word: "<span class='highlight-target'>बैं</span>गन", img: "baingan.jpg", targetKey: "ब (Initial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar_02.jpg", targetKey: "ब (Medial)" },
         { word: "ज<span class='highlight-target'>ले</span>बी", img: "jalebi_02.jpg", targetKey: "ब (Medial)" },
-        { word: "<span class='highlight-target'>म</span>छली", img: "machhli_02.jpg", targetKey: "म (Initial)" }, 
+        
+        // /bh/ (भ)
         { word: "<span class='highlight-target'>भा</span>लू", img: "bhalu_02.jpg", targetKey: "भ (Initial)" },
-        { word: "ट<span class='highlight-target'>मा</span>टर", img: "tamatar_02.jpg", targetKey: "म (Medial)" }, 
         { word: "ख<span class='highlight-target'>म्भ</span>ा", img: "khambha.jpg", targetKey: "म्भ (Conjunct)" },
-        { word: "कल<span class='highlight-target'>म</span>", img: "kalam.jpg", targetKey: "म (Final)" }, 
+        
+        // /m/ (म)
+        { word: "<span class='highlight-target'>म</span>छली", img: "machhli_02.jpg", targetKey: "म (Initial)" },
+        { word: "ट<span class='highlight-target'>मा</span>टर", img: "tamatar_02.jpg", targetKey: "म (Medial)" },
+        { word: "कल<span class='highlight-target'>म</span>", img: "kalam.jpg", targetKey: "म (Final)" },
+        
+        // /y/ (य)
         { word: "<span class='highlight-target'>य</span>ज्ञ", img: "yagya.jpg", targetKey: "य (Initial)" },
-        { word: "<span class='highlight-target'>रे</span>लगाड़ी", img: "relgadi.jpg", targetKey: "र (Initial)" }, 
-        { word: "ना<span class='highlight-target'>रि</span>यल", img: "nariyal.jpg", targetKey: "र (Medial)" },
-        { word: "ख<span class='highlight-target'>र</span>गोश", img: "khargosh_02.jpg", targetKey: "र (Medial)" }, 
         { word: "चा<span class='highlight-target'>य</span>", img: "chai.jpg", targetKey: "य (Final)" },
-        { word: "मट<span class='highlight-target'>र</span>", img: "matar_02.jpg", targetKey: "र (Final)" }, 
+        
+        // /r/ (र)
+        { word: "<span class='highlight-target'>रे</span>लगाड़ी", img: "relgadi.jpg", targetKey: "र (Initial)" },
+        { word: "ना<span class='highlight-target'>रि</span>यल", img: "nariyal.jpg", targetKey: "र (Medial)" },
+        { word: "ख<span class='highlight-target'>र</span>गोश", img: "khargosh_02.jpg", targetKey: "र (Medial Tap)" },
+        { word: "मट<span class='highlight-target'>र</span>", img: "matar_02.jpg", targetKey: "र (Final)" },
+        
+        // /l/ (ल)
         { word: "<span class='highlight-target'>ल</span>ट्टू", img: "lattoo.jpg", targetKey: "ल (Initial)" },
-        { word: "<span class='highlight-target'>वा</span>नर", img: "bandar.jpg", targetKey: "व (Initial)" }, 
         { word: "क<span class='highlight-target'>ल</span>म", img: "kalam_02.jpg", targetKey: "ल (Medial)" },
-        { word: "त<span class='highlight-target'>ल</span>वार", img: "talwar_02.jpg", targetKey: "ल (Medial)" }, 
+        { word: "त<span class='highlight-target'>ल</span>वार", img: "talwar_02.jpg", targetKey: "ल (Medial)" },
         { word: "उ<span class='highlight-target'>ल्ल</span>ू", img: "ullu_02.jpg", targetKey: "ल्ल् (Geminates)" },
-        { word: "ना<span class='highlight-target'>व</span>", img: "naav.jpg", targetKey: "व (Final)" }, 
+        
+        // /v/ (व)
+        { word: "<span class='highlight-target'>वा</span>नर", img: "bandar.jpg", targetKey: "व (Initial)" },
+        { word: "ना<span class='highlight-target'>व</span>", img: "naav.jpg", targetKey: "व (Final)" },
+        
+        // /sh/ (श)
+        { word: "<span class='highlight-target'>श</span>हद", img: "shahad.jpg", targetKey: "श (Initial)" },
+        { word: "म<span class='highlight-target'>शी</span>न", img: "machine.jpg", targetKey: "श (Medial)" },
+        
+        // /s/ (स)
         { word: "<span class='highlight-target'>सू</span>रज", img: "suraj.jpg", targetKey: "स (Initial)" },
-        { word: "म<span class='highlight-target'>शी</span>न", img: "machine.jpg", targetKey: "श (Medial)" }, 
         { word: "कि<span class='highlight-target'>सा</span>न", img: "kisan.jpg", targetKey: "स (Medial)" },
-        { word: "समो<span class='highlight-target'>सा</span>", img: "samosa_02.jpg", targetKey: "स (Final)" }, 
+        { word: "समो<span class='highlight-target'>सा</span>", img: "samosa_02.jpg", targetKey: "स (Final)" },
+        
+        // /h/ (ह)
         { word: "<span class='highlight-target'>हा</span>थी", img: "haathi_02.jpg", targetKey: "ह (Initial)" },
-        { word: "<span class='highlight-target'>श</span>हद", img: "shahad.jpg", targetKey: "श (Initial)" }, 
         { word: "सिपा<span class='highlight-target'>ही</span>", img: "sipahi.jpg", targetKey: "ह (Medial)" },
         
         { type: "header", word: "BLENDS" },
-        { word: "<span class='highlight-target'>क्ष</span>त्रिय", img: "kshatriya.jpg", targetKey: "क्ष (Conjunct Initial)" }, 
+        // /ksh/ (क्ष)
+        { word: "<span class='highlight-target'>क्ष</span>त्रिय", img: "kshatriya.jpg", targetKey: "क्ष (Conjunct Initial)" },
+        { word: "रा<span class='highlight-target'>क्ष</span>स", img: "rakshas.jpg", targetKey: "क्ष (Conjunct Medial)" },
         { word: "वृ<span class='highlight-target'>क्ष</span>", img: "vriksh.jpg", targetKey: "क्ष (Conjunct Final)" },
-        { word: "रा<span class='highlight-target'>क्ष</span>स", img: "rakshas.jpg", targetKey: "क्ष (Conjunct Medial)" }, 
+        
+        // /tr/ (त्र)
         { word: "<span class='highlight-target'>त्रि</span>शूल", img: "trishul.jpg", targetKey: "त्र (Cluster Initial)" },
-        { word: "क्ष<span class='highlight-target'>त्रि</span>य", img: "kshatriya_02.jpg", targetKey: "त्र (Cluster Medial)" }, 
+        { word: "क्ष<span class='highlight-target'>त्रि</span>य", img: "kshatriya_02.jpg", targetKey: "त्र (Cluster Medial)" },
         { word: "प<span class='highlight-target'>त्र</span>", img: "patra.jpg", targetKey: "त्र (Cluster Final)" },
+        
+        // /gy/ (ज्ञ)
         { word: "य<span class='highlight-target'>ज्ञ</span>", img: "yagya.jpg", targetKey: "ज्ञ (Conjunct Final)" }
     ];
 
