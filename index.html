@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PGIMER Articulation Assessment - Universal Audio & Devanagari SODA Report</title>
+    <title>PGIMER Articulation Assessment - Universal iOS & Android Audio</title>
     <style>
         :root { 
             --primary: #0284c7; 
@@ -316,27 +316,17 @@
     ];
 
     let clinicianResults = {};
-    let currentIdx = 0, mediaRecorder = null, chunks = [], currentBlob = null, currentLabel = "NotLabeled";
-    let audioCtx = null, streamSource = null, biquadFilter = null;
+    let currentIdx = 0, currentLabel = "NotLabeled";
 
-    // Detect browser/OS audio support
-    function getSupportedAudioMimeType() {
-        const types = [
-            'audio/mp4',
-            'audio/aac',
-            'audio/webm;codecs=opus',
-            'audio/webm'
-        ];
-        for (const type of types) {
-            if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
-                return type;
-            }
-        }
-        return '';
-    }
-
-    const recordedMimeType = getSupportedAudioMimeType();
-    const fileExtension = (recordedMimeType.includes('mp4') || recordedMimeType.includes('aac')) ? 'm4a' : 'webm';
+    // Audio Engine variables
+    let audioStream = null;
+    let audioContext = null;
+    let audioInput = null;
+    let scriptProcessor = null;
+    let recordedPcmBuffers = [];
+    let isRecording = false;
+    let currentWavBlob = null;
+    let previewAudioElement = null;
 
     function checkMetadata() {
         const name = document.getElementById('pName').value.trim();
@@ -397,66 +387,122 @@
         document.querySelectorAll('.review-panel .soda-btn').forEach(btn => {
             btn.classList.toggle('selected', btn.textContent.trim() === currentLabel);
         });
-        currentBlob = null;
+        currentWavBlob = null;
     }
 
+    // Direct 16-bit PCM WAV File Encoder (compatible with iOS, Android, and Desktop)
+    function encodeWAV(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+
+        function writeString(offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // RIFF chunk descriptor
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeString(8, 'WAVE');
+        
+        // fmt sub-chunk
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);          // SubChunk1Size (16 for PCM)
+        view.setUint16(20, 1, true);           // AudioFormat (1 = PCM)
+        view.setUint16(22, 1, true);           // NumChannels (1 = Mono)
+        view.setUint32(24, sampleRate, true);  // SampleRate
+        view.setUint32(28, sampleRate * 2, true); // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+        view.setUint16(32, 2, true);           // BlockAlign (NumChannels * BitsPerSample/8)
+        view.setUint16(34, 16, true);          // BitsPerSample (16-bit)
+        
+        // data sub-chunk
+        writeString(36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+
+        // Write 16-bit PCM samples with clipping
+        let offset = 44;
+        for (let i = 0; i < samples.length; i++, offset += 2) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+
+        return new Blob([view], { type: 'audio/wav' });
+    }
+
+    // Audio recording handler
     async function handleRecording() {
-        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        if (!isRecording) {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { 
-                        echoCancellation: false, 
-                        noiseSuppression: false, 
-                        autoGainControl: false 
-                    } 
+                // Request microphone access
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
                 });
 
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContextClass();
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioCtxClass();
                 
-                // Resume AudioContext on iOS
-                if (audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
+                // Explicitly resume AudioContext for iOS Safari
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
                 }
 
-                streamSource = audioCtx.createMediaStreamSource(stream);
-                biquadFilter = audioCtx.createBiquadFilter();
-                biquadFilter.type = "highpass";
-                biquadFilter.frequency.value = 80; 
+                audioInput = audioContext.createMediaStreamSource(audioStream);
+                
+                // Buffer audio frames directly in JavaScript
+                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                recordedPcmBuffers = [];
 
-                const dest = audioCtx.createMediaStreamDestination();
-                streamSource.connect(biquadFilter).connect(dest);
-
-                const recorderOptions = recordedMimeType ? { mimeType: recordedMimeType } : {};
-                mediaRecorder = new MediaRecorder(dest.stream, recorderOptions);
-                chunks = [];
-
-                mediaRecorder.ondataavailable = e => {
-                    if (e.data && e.data.size > 0) {
-                        chunks.push(e.data);
-                    }
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
+                    const channelData = e.inputBuffer.getChannelData(0);
+                    recordedPcmBuffers.push(new Float32Array(channelData));
                 };
 
-                mediaRecorder.onstop = () => { 
-                    const actualType = recordedMimeType || (chunks[0] ? chunks[0].type : 'audio/mp4');
-                    currentBlob = new Blob(chunks, { type: actualType }); 
-                    document.getElementById('reviewPanel').style.display = 'block'; 
-                };
+                audioInput.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
 
-                mediaRecorder.start();
+                isRecording = true;
                 document.getElementById('recordBtn').classList.add('recording');
                 document.getElementById('recordBtn').textContent = "⏹️ STOP RECORDING";
                 document.getElementById('reviewPanel').style.display = 'none';
-            } catch (err) { 
-                alert("Microphone Access Error: " + err.message); 
+            } catch (err) {
+                alert("Microphone Error: " + err.message);
             }
         } else {
-            mediaRecorder.stop();
-            if (audioCtx && audioCtx.state !== 'closed') {
-                audioCtx.close();
+            // Stop recording
+            isRecording = false;
+
+            // Disconnect and release audio nodes
+            if (scriptProcessor) scriptProcessor.disconnect();
+            if (audioInput) audioInput.disconnect();
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
             }
+
+            // Concatenate Float32 PCM chunks
+            let totalLength = recordedPcmBuffers.reduce((acc, b) => acc + b.length, 0);
+            let mergedSamples = new Float32Array(totalLength);
+            let offset = 0;
+            for (let b of recordedPcmBuffers) {
+                mergedSamples.set(b, offset);
+                offset += b.length;
+            }
+
+            // Encode to a valid WAV file
+            currentWavBlob = encodeWAV(mergedSamples, audioContext.sampleRate);
+            
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close();
+            }
+
             document.getElementById('recordBtn').classList.remove('recording');
             document.getElementById('recordBtn').textContent = "🎙️ RECORD SAMPLE";
+            document.getElementById('reviewPanel').style.display = 'block';
         }
     }
 
@@ -476,13 +522,16 @@
     }
     
     function playCurrent() { 
-        if (currentBlob) {
-            const audioUrl = URL.createObjectURL(currentBlob);
-            const audio = new Audio();
-            audio.src = audioUrl;
-            audio.playsInline = true;
-            audio.play().catch(err => {
-                alert("Audio playback error: " + err.message);
+        if (currentWavBlob) {
+            if (previewAudioElement) {
+                previewAudioElement.pause();
+                previewAudioElement = null;
+            }
+            const audioUrl = URL.createObjectURL(currentWavBlob);
+            previewAudioElement = new Audio(audioUrl);
+            previewAudioElement.playsInline = true;
+            previewAudioElement.play().catch(err => {
+                alert("Playback failed: " + err.message);
             });
         } 
     }
@@ -497,10 +546,10 @@
         const cleanWord = (item.rawHindi || item.word).replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_');
         const cleanTarget = (item.targetKey || 'Target').replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_');
         
-        if (currentBlob) {
+        if (currentWavBlob) {
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(currentBlob);
-            link.download = `${name}_${age}_${gender}_Item-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.${fileExtension}`;
+            link.href = URL.createObjectURL(currentWavBlob);
+            link.download = `${name}_${age}_${gender}_Item-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.wav`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
