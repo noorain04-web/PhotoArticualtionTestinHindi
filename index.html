@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PGIMER Articulation Assessment - Devanagari SODA Report</title>
+    <title>PGIMER Articulation Assessment - Universal Audio & Devanagari SODA Report</title>
     <style>
         :root { 
             --primary: #0284c7; 
@@ -56,7 +56,6 @@
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
-        /* Print Specific Styling */
         @media print {
             body * { visibility: hidden; }
             #reportPrintArea, #reportPrintArea * { visibility: visible; }
@@ -114,7 +113,6 @@
     <button class="btn-pdf" onclick="generateDevanagariReport()">📄 GENERATE DEVANAGARI REPORT (PDF)</button>
 </div>
 
-<!-- Hidden Clean Report Print Area (supports complete Unicode Devanagari rendering) -->
 <div id="reportPrintArea" style="display: none; font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Mangal', sans-serif;"></div>
 
 <script>
@@ -318,8 +316,27 @@
     ];
 
     let clinicianResults = {};
-    let currentIdx = 0, mediaRecorder, chunks = [], currentBlob = null, currentLabel = "NotLabeled";
-    let audioCtx, streamSource, biquadFilter;
+    let currentIdx = 0, mediaRecorder = null, chunks = [], currentBlob = null, currentLabel = "NotLabeled";
+    let audioCtx = null, streamSource = null, biquadFilter = null;
+
+    // Detect browser/OS audio support
+    function getSupportedAudioMimeType() {
+        const types = [
+            'audio/mp4',
+            'audio/aac',
+            'audio/webm;codecs=opus',
+            'audio/webm'
+        ];
+        for (const type of types) {
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+                return type;
+            }
+        }
+        return '';
+    }
+
+    const recordedMimeType = getSupportedAudioMimeType();
+    const fileExtension = (recordedMimeType.includes('mp4') || recordedMimeType.includes('aac')) ? 'm4a' : 'webm';
 
     function checkMetadata() {
         const name = document.getElementById('pName').value.trim();
@@ -387,9 +404,21 @@
         if (!mediaRecorder || mediaRecorder.state === "inactive") {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 } 
+                    audio: { 
+                        echoCancellation: false, 
+                        noiseSuppression: false, 
+                        autoGainControl: false 
+                    } 
                 });
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+                
+                // Resume AudioContext on iOS
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
                 streamSource = audioCtx.createMediaStreamSource(stream);
                 biquadFilter = audioCtx.createBiquadFilter();
                 biquadFilter.type = "highpass";
@@ -398,11 +427,19 @@
                 const dest = audioCtx.createMediaStreamDestination();
                 streamSource.connect(biquadFilter).connect(dest);
 
-                mediaRecorder = new MediaRecorder(dest.stream);
+                const recorderOptions = recordedMimeType ? { mimeType: recordedMimeType } : {};
+                mediaRecorder = new MediaRecorder(dest.stream, recorderOptions);
                 chunks = [];
-                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+                mediaRecorder.ondataavailable = e => {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
                 mediaRecorder.onstop = () => { 
-                    currentBlob = new Blob(chunks, { type: 'audio/wav' }); 
+                    const actualType = recordedMimeType || (chunks[0] ? chunks[0].type : 'audio/mp4');
+                    currentBlob = new Blob(chunks, { type: actualType }); 
                     document.getElementById('reviewPanel').style.display = 'block'; 
                 };
 
@@ -410,10 +447,14 @@
                 document.getElementById('recordBtn').classList.add('recording');
                 document.getElementById('recordBtn').textContent = "⏹️ STOP RECORDING";
                 document.getElementById('reviewPanel').style.display = 'none';
-            } catch (err) { alert("Mic Access Error: " + err.message); }
+            } catch (err) { 
+                alert("Microphone Access Error: " + err.message); 
+            }
         } else {
             mediaRecorder.stop();
-            audioCtx.close();
+            if (audioCtx && audioCtx.state !== 'closed') {
+                audioCtx.close();
+            }
             document.getElementById('recordBtn').classList.remove('recording');
             document.getElementById('recordBtn').textContent = "🎙️ RECORD SAMPLE";
         }
@@ -435,11 +476,19 @@
     }
     
     function playCurrent() { 
-        if (currentBlob) new Audio(URL.createObjectURL(currentBlob)).play(); 
+        if (currentBlob) {
+            const audioUrl = URL.createObjectURL(currentBlob);
+            const audio = new Audio();
+            audio.src = audioUrl;
+            audio.playsInline = true;
+            audio.play().catch(err => {
+                alert("Audio playback error: " + err.message);
+            });
+        } 
     }
 
     function finalizeSave() {
-        const name = document.getElementById('pName').value.replace(/\s+/g, '_');
+        const name = document.getElementById('pName').value.replace(/\s+/g, '_') || 'Patient';
         const age = document.getElementById('pAge').value || 'NA';
         const gender = document.getElementById('pGender').value;
         const date = new Date().toISOString().split('T')[0];
@@ -451,14 +500,15 @@
         if (currentBlob) {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(currentBlob);
-            link.download = `${name}_${age}_${gender}_Item-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.wav`;
+            link.download = `${name}_${age}_${gender}_Item-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.${fileExtension}`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         }
         
-        alert(`Evaluation saved: ${currentLabel}`);
+        alert(`Evaluation recorded: ${currentLabel}`);
     }
 
-    // High-Fidelity Devanagari Native Vector Print/PDF Engine
     function generateDevanagariReport() {
         const name = document.getElementById('pName').value.trim() || "Unregistered Patient";
         const age = document.getElementById('pAge').value.trim() || "N/A";
@@ -501,13 +551,11 @@
         const reportArea = document.getElementById('reportPrintArea');
         reportArea.innerHTML = `
             <div style="padding:20px; color:#0f172a; max-width:850px; margin:auto;">
-                <!-- Header -->
                 <div style="background:#0284c7; color:white; padding:15px; border-radius:12px; text-align:center; margin-bottom:15px;">
                     <h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:0.5px;">SPEECH ARTICULATION ASSESSMENT CLINICAL REPORT</h2>
                     <p style="margin:4px 0 0 0; font-size:12px; opacity:0.95;">Standardized Hindi Articulation & Phonological Battery (SODA Analysis)</p>
                 </div>
 
-                <!-- Patient & Session Information -->
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px;">
                     <div><strong>Patient Name (मरीज का नाम):</strong> ${name}</div>
                     <div><strong>Date of Test (दिनांक):</strong> ${testDate}</div>
@@ -517,7 +565,6 @@
                     <div><strong>Test Battery:</strong> Hindi Varnamala (I-M-F Order)</div>
                 </div>
 
-                <!-- Metric Summary Box -->
                 <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px; text-align:center;">
                     <thead>
                         <tr style="background:#0f172a; color:white;">
@@ -543,7 +590,6 @@
                     </tbody>
                 </table>
 
-                <!-- Main Assessment Data Table in Devanagari -->
                 <table style="width:100%; border-collapse:collapse; text-align:left;">
                     <thead>
                         <tr style="background:#0284c7; color:white; font-size:13px;">
@@ -565,7 +611,6 @@
             </div>
         `;
 
-        // Render clean print frame without page break glitches
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
