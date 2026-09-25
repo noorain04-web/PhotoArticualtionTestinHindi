@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PGIMER Articulation Assessment - Report Ready</title>
-    <!-- jsPDF & jsPDF-AutoTable for Client-Side PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <title>PGIMER Articulation Assessment - Devanagari SODA Report</title>
     <style>
         :root { 
             --primary: #0284c7; 
@@ -15,7 +12,7 @@
             --target-accent: #f59e0b;
             --highlight-color: #dc2626;
         }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: system-ui, -apple-system, "Noto Sans Devanagari", "Mangal", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 460px; background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); box-sizing: border-box; }
         
         .session-info { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 10px; border-radius: 12px; margin-bottom: 12px; width: 100%; text-align: center; border: 1px solid #e2e8f0; display: none; }
@@ -58,6 +55,13 @@
         .btn-pdf { background: #0f172a; color: white; width: 100%; padding: 12px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; font-size: 0.9rem; margin-top: 12px; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        /* Print Specific Styling */
+        @media print {
+            body * { visibility: hidden; }
+            #reportPrintArea, #reportPrintArea * { visibility: visible; }
+            #reportPrintArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -73,7 +77,11 @@
             <input type="text" id="pName" class="meta-input" placeholder="Patient Name (Mandatory)">
             <div style="display:flex; gap:10px;">
                 <input type="text" id="pAge" class="meta-input" placeholder="Age">
-                <select id="pGender" class="meta-input"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
+                <select id="pGender" class="meta-input">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
             </div>
             <input type="text" id="pCR" class="meta-input" placeholder="CR / Patient ID (Optional)">
             <input type="text" id="pClinician" class="meta-input" placeholder="Clinician / Examiner Name">
@@ -103,170 +111,213 @@
         <button class="btn-record" style="background:#10b981; margin:0;" onclick="finalizeSave()">💾 SAVE SAMPLE</button>
     </div>
 
-    <!-- Download PDF Report Button -->
-    <button class="btn-pdf" onclick="generatePDFReport()">📄 DOWNLOAD SODA REPORT (PDF)</button>
+    <button class="btn-pdf" onclick="generateDevanagariReport()">📄 GENERATE DEVANAGARI REPORT (PDF)</button>
 </div>
+
+<!-- Hidden Clean Report Print Area (supports complete Unicode Devanagari rendering) -->
+<div id="reportPrintArea" style="display: none; font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Mangal', sans-serif;"></div>
 
 <script>
     const assessmentList = [
         { type: "header", word: "VOWELS" },
-        { word: "<span class='highlight-target'>अ</span>नार", img: "anar.jpg", rawWord: "अनार", targetKey: "अ (Initial)" }, 
-        { word: "म<span class='highlight-target'>ट</span>र", img: "matar.jpg", rawWord: "मटर", targetKey: "अ (Medial)" }, 
-        { word: "ब<span class='highlight-target'>स</span>", img: "bas.jpg", rawWord: "बस", targetKey: "अ (Final Schwa)" },
+        // /ə/ (अ)
+        { word: "<span class='highlight-target'>अ</span>नार", rawHindi: "अनार", img: "anar.jpg", targetKey: "अ (Initial)" }, 
+        { word: "म<span class='highlight-target'>ट</span>र", rawHindi: "मटर", img: "matar.jpg", targetKey: "अ (Medial)" }, 
+        { word: "ब<span class='highlight-target'>स</span>", rawHindi: "बस", img: "bas.jpg", targetKey: "अ (Final Schwa)" },
 
-        { word: "<span class='highlight-target'>आ</span>म", img: "aam.jpg", rawWord: "आम", targetKey: "आ (Initial)" },
-        { word: "छा<span class='highlight-target'>ता</span>", img: "chhata.jpg", rawWord: "छाता", targetKey: "आ (Final)" }, 
+        // /a:/ (आ)
+        { word: "<span class='highlight-target'>आ</span>म", rawHindi: "आम", img: "aam.jpg", targetKey: "आ (Initial)" },
+        { word: "छा<span class='highlight-target'>ता</span>", rawHindi: "छाता", img: "chhata.jpg", targetKey: "आ (Final)" }, 
 
-        { word: "<span class='highlight-target'>इ</span>मली", img: "imli.jpg", rawWord: "इमली", targetKey: "इ (Initial)" },
-        { word: "त<span class='highlight-target'>कि</span>या", img: "takiya.jpg", rawWord: "तकिया", targetKey: "इ (Medial)" },
+        // /i/ (इ)
+        { word: "<span class='highlight-target'>इ</span>मली", rawHindi: "इमली", img: "imli.jpg", targetKey: "इ (Initial)" },
+        { word: "त<span class='highlight-target'>कि</span>या", rawHindi: "तकिया", img: "takiya.jpg", targetKey: "इ (Medial)" },
 
-        { word: "<span class='highlight-target'>ती</span>न", img: "teen.jpg", rawWord: "तीन", targetKey: "ई (Medial)" },
-        { word: "ब<span class='highlight-target'>गी</span>चा", img: "bagicha.jpg", rawWord: "बगीचा", targetKey: "ई (Medial Alt)" }, 
+        // /i:/ (ई)
+        { word: "<span class='highlight-target'>ती</span>न", rawHindi: "तीन", img: "teen.jpg", targetKey: "ई (Medial)" },
+        { word: "ब<span class='highlight-target'>गी</span>चा", rawHindi: "बगीचा", img: "bagicha.jpg", targetKey: "ई (Medial Alt)" }, 
 
-        { word: "<span class='highlight-target'>उ</span>ल्लू", img: "ullu.jpg", rawWord: "उल्लू", targetKey: "उ (Initial)" }, 
-        { word: "सा<span class='highlight-target'>बु</span>न", img: "sabun.jpg", rawWord: "साबुन", targetKey: "उ (Medial)" },
-        { word: "सा<span class='highlight-target'>धु</span>", img: "sadhu.jpg", rawWord: "साधु", targetKey: "उ (Final)" },
+        // /u/ (उ)
+        { word: "<span class='highlight-target'>उ</span>ल्लू", rawHindi: "उल्लू", img: "ullu.jpg", targetKey: "उ (Initial)" }, 
+        { word: "सा<span class='highlight-target'>बु</span>न", rawHindi: "साबुन", img: "sabun.jpg", targetKey: "उ (Medial)" },
+        { word: "सा<span class='highlight-target'>धु</span>", rawHindi: "साधु", img: "sadhu.jpg", targetKey: "उ (Final)" },
 
-        { word: "<span class='highlight-target'>ऊँ</span>ट", img: "oont.jpg", rawWord: "ऊँट", targetKey: "ऊँ (Anunasika Initial)" },
-        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar.jpg", rawWord: "कबूतर", targetKey: "ऊ (Medial)" }, 
-        { word: "भा<span class='highlight-target'>लू</span>", img: "bhalu.jpg", rawWord: "भालू", targetKey: "ऊ (Final)" }, 
+        // /u:/ & /ũ:/ (ऊ / ऊँ)
+        { word: "<span class='highlight-target'>ऊँ</span>ट", rawHindi: "ऊँट", img: "oont.jpg", targetKey: "ऊँ (Anunasika Initial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", rawHindi: "कबूतर", img: "kabutar.jpg", targetKey: "ऊ (Medial)" }, 
+        { word: "भा<span class='highlight-target'>लू</span>", rawHindi: "भालू", img: "bhalu.jpg", targetKey: "ऊ (Final)" }, 
 
-        { word: "पे<span class='highlight-target'>ड़</span>", img: "ped.jpg", rawWord: "पेड़", targetKey: "ए (Medial)" }, 
-        { word: "ज<span class='highlight-target'>ले</span>बी", img: "jalebi.jpg", rawWord: "जलेबी", targetKey: "ए (Medial Alt)" }, 
-        { word: "गुब्बा<span class='highlight-target'>रे</span>", img: "gubbare.jpg", rawWord: "गुब्बारे", targetKey: "ए (Final)" }, 
+        // /e:/ (ए)
+        { word: "पे<span class='highlight-target'>ड़</span>", rawHindi: "पेड़", img: "ped.jpg", targetKey: "ए (Medial)" }, 
+        { word: "ज<span class='highlight-target'>ले</span>बी", rawHindi: "जलेबी", img: "jalebi.jpg", targetKey: "ए (Medial Alt)" }, 
+        { word: "गुब्बा<span class='highlight-target'>रे</span>", rawHindi: "गुब्बारे", img: "gubbare.jpg", targetKey: "ए (Final)" }, 
 
-        { word: "<span class='highlight-target'>ऐ</span>नक", img: "ainak.jpg", rawWord: "ऐनक", targetKey: "ऐ (Initial)" }, 
+        // /æ:/ (ऐ)
+        { word: "<span class='highlight-target'>ऐ</span>नक", rawHindi: "ऐनक", img: "ainak.jpg", targetKey: "ऐ (Initial)" }, 
 
-        { word: "<span class='highlight-target'>ओ</span>खली", img: "okhli.jpg", rawWord: "ओखली", targetKey: "ओ (Initial)" },
-        { word: "स<span class='highlight-target'>मो</span>सा", img: "samosa.jpg", rawWord: "समोसा", targetKey: "ओ (Medial)" },
+        // /o:/ (ओ)
+        { word: "<span class='highlight-target'>ओ</span>खली", rawHindi: "ओखली", img: "okhli.jpg", targetKey: "ओ (Initial)" },
+        { word: "स<span class='highlight-target'>मो</span>सा", rawHindi: "समोसा", img: "samosa.jpg", targetKey: "ओ (Medial)" },
 
-        { word: "क<span class='highlight-target'>ौ</span>आ", img: "kaua.jpg", rawWord: "कौआ", targetKey: "औ (Medial)" },
-        { word: "खि<span class='highlight-target'>लौ</span>ना", img: "khilona.jpg", rawWord: "खिलौना", targetKey: "औ (Medial Alt)" },
+        // /ɔ:/ (औ)
+        { word: "क<span class='highlight-target'>ौ</span>आ", rawHindi: "कौआ", img: "kaua.jpg", targetKey: "औ (Medial)" },
+        { word: "खि<span class='highlight-target'>लौ</span>ना", rawHindi: "खिलौना", img: "khilona.jpg", targetKey: "औ (Medial Alt)" },
 
-        { word: "<span class='highlight-target'>अं</span>गूर", img: "angoor.jpg", rawWord: "अंगूर", targetKey: "अं (Anusvara Initial)" }, 
-        { word: "प<span class='highlight-target'>तं</span>ग", img: "patang.jpg", rawWord: "पतंग", targetKey: "अं (Anusvara Medial)" },
+        // /əŋ/ (अं)
+        { word: "<span class='highlight-target'>अं</span>गूर", rawHindi: "अंगूर", img: "angoor.jpg", targetKey: "अं (Anusvara Initial)" }, 
+        { word: "प<span class='highlight-target'>तं</span>ग", rawHindi: "पतंग", img: "patang.jpg", targetKey: "अं (Anusvara Medial)" },
 
         { type: "header", word: "CONSONANTS" },
-        { word: "<span class='highlight-target'>क</span>मल", img: "kamal.jpg", rawWord: "कमल", targetKey: "क (Initial)" },
-        { word: "ब<span class='highlight-target'>क</span>री", img: "bakri.jpg", rawWord: "बकरी", targetKey: "क (Medial)" },
-        { word: "मेंढ<span class='highlight-target'>क</span>", img: "mendhak_02.jpg", rawWord: "मेंढक", targetKey: "क (Final)" },
+        // /k/ (क)
+        { word: "<span class='highlight-target'>क</span>मल", rawHindi: "कमल", img: "kamal.jpg", targetKey: "क (Initial)" },
+        { word: "ब<span class='highlight-target'>क</span>री", rawHindi: "बकरी", img: "bakri.jpg", targetKey: "क (Medial)" },
+        { word: "मेंढ<span class='highlight-target'>क</span>", rawHindi: "मेंढक", img: "mendhak_02.jpg", targetKey: "क (Final)" },
         
-        { word: "<span class='highlight-target'>ख</span>रगोश", img: "khargosh.jpg", rawWord: "खरगोश", targetKey: "ख (Initial)" },
-        { word: "ओ<span class='highlight-target'>ख</span>ली", img: "okhli_02.jpg", rawWord: "ओखली", targetKey: "ख (Medial)" },
-        { word: "बत्त<span class='highlight-target'>ख</span>", img: "battakh.jpg", rawWord: "बत्तख", targetKey: "ख (Final)" },
+        // /kh/ (ख)
+        { word: "<span class='highlight-target'>ख</span>रगोश", rawHindi: "खरगोश", img: "khargosh.jpg", targetKey: "ख (Initial)" },
+        { word: "ओ<span class='highlight-target'>ख</span>ली", rawHindi: "ओखली", img: "okhli_02.jpg", targetKey: "ख (Medial)" },
+        { word: "बत्त<span class='highlight-target'>ख</span>", rawHindi: "बत्तख", img: "battakh.jpg", targetKey: "ख (Final)" },
         
-        { word: "<span class='highlight-target'>गा</span>जर", img: "gajar.jpg", rawWord: "गाजर", targetKey: "ग (Initial)" },
-        { word: "म<span class='highlight-target'>ग</span>रमच्छ", img: "magarmachh.jpg", rawWord: "मगरमच्छ", targetKey: "ग (Medial)" },
-        { word: "पतं<span class='highlight-target'>ग</span>", img: "patang_02.jpg", rawWord: "पतंग", targetKey: "ग (Final)" },
+        // /g/ (ग)
+        { word: "<span class='highlight-target'>गा</span>जर", rawHindi: "गाजर", img: "gajar.jpg", targetKey: "ग (Initial)" },
+        { word: "म<span class='highlight-target'>ग</span>रमच्छ", rawHindi: "मगरमच्छ", img: "magarmachh.jpg", targetKey: "ग (Medial)" },
+        { word: "पतं<span class='highlight-target'>ग</span>", rawHindi: "पतंग", img: "patang_02.jpg", targetKey: "ग (Final)" },
         
-        { word: "<span class='highlight-target'>घा</span>घरा", img: "ghaghra.jpg", rawWord: "घाघरा", targetKey: "घ (Initial)" },
-        { word: "कं<span class='highlight-target'>घा</span>", img: "kanghi.jpg", rawWord: "कंघा", targetKey: "घ (Medial)" },
+        // /gh/ (घ)
+        { word: "<span class='highlight-target'>घा</span>घरा", rawHindi: "घाघरा", img: "ghaghra.jpg", targetKey: "घ (Initial)" },
+        { word: "कं<span class='highlight-target'>घा</span>", rawHindi: "कंघा", img: "kanghi.jpg", targetKey: "घ (Medial)" },
         
-        { word: "<span class='highlight-target'>च</span>प्पल", img: "chappal.jpg", rawWord: "चप्पल", targetKey: "च (Initial)" },
-        { word: "ना<span class='highlight-target'>च</span>ना", img: "nachna.jpg", rawWord: "नाचना", targetKey: "च (Medial)" },
-        { word: "ब<span class='highlight-target'>च्चा</span>", img: "bachcha.jpg", rawWord: "बच्चा", targetKey: "च्च (Geminates)" },
+        // /ch/ (च)
+        { word: "<span class='highlight-target'>च</span>प्पल", rawHindi: "चप्पल", img: "chappal.jpg", targetKey: "च (Initial)" },
+        { word: "ना<span class='highlight-target'>च</span>ना", rawHindi: "नाचना", img: "nachna.jpg", targetKey: "च (Medial)" },
+        { word: "ब<span class='highlight-target'>च्चा</span>", rawHindi: "बच्चा", img: "bachcha.jpg", targetKey: "च्च (Geminates)" },
         
-        { word: "<span class='highlight-target'>छा</span>ता", img: "chhata_02.jpg", rawWord: "छाता", targetKey: "छ (Initial)" },
-        { word: "म<span class='highlight-target'>छ</span>ली", img: "machhli.jpg", rawWord: "मछली", targetKey: "छ (Medial)" },
-        { word: "मगरम<span class='highlight-target'>च्छ</span>", img: "magarmachh_02.jpg", rawWord: "मगरमच्छ", targetKey: "छ (Final)" },
+        // /chh/ (छ)
+        { word: "<span class='highlight-target'>छा</span>ता", rawHindi: "छाता", img: "chhata_02.jpg", targetKey: "छ (Initial)" },
+        { word: "म<span class='highlight-target'>छ</span>ली", rawHindi: "मछली", img: "machhli.jpg", targetKey: "छ (Medial)" },
+        { word: "मगरम<span class='highlight-target'>च्छ</span>", rawHindi: "मगरमच्छ", img: "magarmachh_02.jpg", targetKey: "छ (Final)" },
         
-        { word: "<span class='highlight-target'>ज</span>हाज", img: "jahaj.jpg", rawWord: "जहाज", targetKey: "ज (Initial)" },
-        { word: "गा<span class='highlight-target'>ज</span>र", img: "gajar_02.jpg", rawWord: "गाजर", targetKey: "ज (Medial)" },
+        // /j/ (ज)
+        { word: "<span class='highlight-target'>ज</span>हाज", rawHindi: "जहाज", img: "jahaj.jpg", targetKey: "ज (Initial)" },
+        { word: "गा<span class='highlight-target'>ज</span>र", rawHindi: "गाजर", img: "gajar_02.jpg", targetKey: "ज (Medial)" },
         
-        { word: "<span class='highlight-target'>झं</span>डा", img: "jhanda.jpg", rawWord: "झंडा", targetKey: "झ (Initial)" },
+        // /jh/ (झ)
+        { word: "<span class='highlight-target'>झं</span>डा", rawHindi: "झंडा", img: "jhanda.jpg", targetKey: "झ (Initial)" },
         
-        { word: "<span class='highlight-target'>ट</span>माटर", img: "tamatar.jpg", rawWord: "टमाटर", targetKey: "ट (Initial)" },
-        { word: "ब<span class='highlight-target'>ट</span>न", img: "button.jpg", rawWord: "बटन", targetKey: "ट (Medial)" },
-        { word: "ऊँ<span class='highlight-target'>ट</span>", img: "oont_02.jpg", rawWord: "ऊँट", targetKey: "ट (Final)" },
+        // /t/ (ट)
+        { word: "<span class='highlight-target'>ट</span>माटर", rawHindi: "टमाटर", img: "tamatar.jpg", targetKey: "ट (Initial)" },
+        { word: "ब<span class='highlight-target'>ट</span>न", rawHindi: "बटन", img: "button.jpg", targetKey: "ट (Medial)" },
+        { word: "ऊँ<span class='highlight-target'>ट</span>", rawHindi: "ऊँट", img: "oont_02.jpg", targetKey: "ट (Final)" },
         
-        { word: "<span class='highlight-target'>ठ</span>ठेरा", img: "damaru.jpg", rawWord: "ठठेरा", targetKey: "ठ (Initial)" },
-        { word: "मि<span class='highlight-target'>ठा</span>ई", img: "mithai.jpg", rawWord: "मिठाई", targetKey: "ठ (Medial)" },
-        { word: "अंगू<span class='highlight-target'>ठी</span>", img: "anguthi.jpg", rawWord: "अंगूठी", targetKey: "ठ (Final)" },
+        // /th/ (ठ)
+        { word: "<span class='highlight-target'>ठ</span>ठेरा", rawHindi: "ठठेरा", img: "damaru.jpg", targetKey: "ठ (Initial)" },
+        { word: "मि<span class='highlight-target'>ठा</span>ई", rawHindi: "मिठाई", img: "mithai.jpg", targetKey: "ठ (Medial)" },
+        { word: "अंगू<span class='highlight-target'>ठी</span>", rawHindi: "अंगूठी", img: "anguthi.jpg", targetKey: "ठ (Final)" },
         
-        { word: "<span class='highlight-target'>ड</span>मरू", img: "damaru.jpg", rawWord: "डमरू", targetKey: "ड (Initial)" },
-        { word: "झं<span class='highlight-target'>डा</span>", img: "jhanda_02.jpg", rawWord: "झंडा", targetKey: "ड (Medial)" },
+        // /d/ (ड)
+        { word: "<span class='highlight-target'>ड</span>मरू", rawHindi: "डमरू", img: "damaru.jpg", targetKey: "ड (Initial)" },
+        { word: "झं<span class='highlight-target'>डा</span>", rawHindi: "झंडा", img: "jhanda_02.jpg", targetKey: "ड (Medial)" },
         
-        { word: "<span class='highlight-target'>ढो</span>लक", img: "dholak.jpg", rawWord: "ढोलक", targetKey: "ढ (Initial)" },
-        { word: "में<span class='highlight-target'>ढ</span>क", img: "mendhak.jpg", rawWord: "मेंढक", targetKey: "ढ (Medial)" },
+        // /dh/ (ढ)
+        { word: "<span class='highlight-target'>ढो</span>लक", rawHindi: "ढोलक", img: "dholak.jpg", targetKey: "ढ (Initial)" },
+        { word: "में<span class='highlight-target'>ढ</span>क", rawHindi: "मेंढक", img: "mendhak.jpg", targetKey: "ढ (Medial)" },
         
-        { word: "<span class='highlight-target'>त</span>लवार", img: "talwar.jpg", rawWord: "तलवार", targetKey: "त (Initial)" },
-        { word: "ब<span class='highlight-target'>त्त</span>ख", img: "battakh_02.jpg", rawWord: "बत्तख", targetKey: "त (Medial Geminate)" },
+        // /t/ (त)
+        { word: "<span class='highlight-target'>त</span>लवार", rawHindi: "तलवार", img: "talwar.jpg", targetKey: "त (Initial)" },
+        { word: "ब<span class='highlight-target'>त्त</span>ख", rawHindi: "बत्तख", img: "battakh_02.jpg", targetKey: "त (Medial Geminate)" },
         
-        { word: "<span class='highlight-target'>थ</span>रमस", img: "tharmas.jpg", rawWord: "थरमस", targetKey: "थ (Initial)" },
-        { word: "ह<span class='highlight-target'>थे</span>ली", img: "hatheli.jpg", rawWord: "हथेली", targetKey: "थ (Medial)" },
-        { word: "हा<span class='highlight-target'>थी</span>", img: "haathi.jpg", rawWord: "हाथी", targetKey: "थ (Final)" },
+        // /th/ (थ)
+        { word: "<span class='highlight-target'>थ</span>रमस", rawHindi: "थरमस", img: "tharmas.jpg", targetKey: "थ (Initial)" },
+        { word: "ह<span class='highlight-target'>थे</span>ली", rawHindi: "हथेली", img: "hatheli.jpg", targetKey: "थ (Medial)" },
+        { word: "हा<span class='highlight-target'>थी</span>", rawHindi: "हाथी", img: "haathi.jpg", targetKey: "थ (Final)" },
         
-        { word: "<span class='highlight-target'>दां</span>त", img: "daant.jpg", rawWord: "दांत", targetKey: "द (Initial)" },
-        { word: "म<span class='highlight-target'>दा</span>री", img: "madari.jpg", rawWord: "मदारी", targetKey: "द (Medial)" },
-        { word: "अमरु<span class='highlight-target'>द</span>", img: "amrud.jpg", rawWord: "अमरुद", targetKey: "द (Final)" },
+        // /d/ (द)
+        { word: "<span class='highlight-target'>दां</span>त", rawHindi: "दांत", img: "daant.jpg", targetKey: "द (Initial)" },
+        { word: "म<span class='highlight-target'>दा</span>री", rawHindi: "मदारी", img: "madari.jpg", targetKey: "द (Medial)" },
+        { word: "अमरु<span class='highlight-target'>द</span>", rawHindi: "अमरुद", img: "amrud.jpg", targetKey: "द (Final)" },
         
-        { word: "<span class='highlight-target'>ध</span>नुष", img: "dhanush.jpg", rawWord: "धनुष", targetKey: "ध (Initial)" },
-        { word: "ग<span class='highlight-target'>धा</span>", img: "gadha.jpg", rawWord: "गधा", targetKey: "ध (Medial)" },
+        // /dh/ (ध)
+        { word: "<span class='highlight-target'>ध</span>नुष", rawHindi: "धनुष", img: "dhanush.jpg", targetKey: "ध (Initial)" },
+        { word: "ग<span class='highlight-target'>धा</span>", rawHindi: "गधा", img: "gadha.jpg", targetKey: "ध (Medial)" },
         
-        { word: "<span class='highlight-target'>न</span>ल", img: "nal.jpg", rawWord: "नल", targetKey: "न (Initial)" },
-        { word: "ऐ<span class='highlight-target'>न</span>क", img: "ainak_02.jpg", rawWord: "ऐनक", targetKey: "न (Medial)" },
-        { word: "का<span class='highlight-target'>न</span>", img: "kaan.jpg", rawWord: "कान", targetKey: "न (Final)" },
+        // /n/ (न)
+        { word: "<span class='highlight-target'>न</span>ल", rawHindi: "नल", img: "nal.jpg", targetKey: "न (Initial)" },
+        { word: "ऐ<span class='highlight-target'>न</span>क", rawHindi: "ऐनक", img: "ainak_02.jpg", targetKey: "न (Medial)" },
+        { word: "का<span class='highlight-target'>न</span>", rawHindi: "कान", img: "kaan.jpg", targetKey: "न (Final)" },
         
-        { word: "प<span class='highlight-target'>पी</span>ता", img: "papita.jpg", rawWord: "पपीता", targetKey: "प (Medial)" },
-        { word: "च<span class='highlight-target'>प्प</span>ल", img: "chappal_02.jpg", rawWord: "चप्पल", targetKey: "प्प (Geminates)" },
-        { word: "सां<span class='highlight-target'>प</span>", img: "saamp.jpg", rawWord: "सांप", targetKey: "प (Final)" },
+        // /p/ (प)
+        { word: "प<span class='highlight-target'>पी</span>ता", rawHindi: "पपीता", img: "papita.jpg", targetKey: "प (Medial)" },
+        { word: "च<span class='highlight-target'>प्प</span>ल", rawHindi: "चप्पल", img: "chappal_02.jpg", targetKey: "प्प (Geminates)" },
+        { word: "सां<span class='highlight-target'>प</span>", rawHindi: "सांप", img: "saamp.jpg", targetKey: "प (Final)" },
         
-        { word: "<span class='highlight-target'>फू</span>ल", img: "phool.jpg", rawWord: "फूल", targetKey: "फ (Initial)" },
-        { word: "ढ<span class='highlight-target'>फ</span>ली", img: "dafli.jpg", rawWord: "ढफली", targetKey: "फ (Medial)" },
-        { word: "सो<span class='highlight-target'>फ़ा</span>", img: "sofa.jpg", rawWord: "सोफा", targetKey: "फ (Medial Fricative)" },
+        // /ph/ (फ)
+        { word: "<span class='highlight-target'>फू</span>ल", rawHindi: "फूल", img: "phool.jpg", targetKey: "फ (Initial)" },
+        { word: "ढ<span class='highlight-target'>फ</span>ली", rawHindi: "ढफली", img: "dafli.jpg", targetKey: "फ (Medial)" },
+        { word: "सो<span class='highlight-target'>फ़ा</span>", rawHindi: "सोफ़ा", img: "sofa.jpg", targetKey: "फ (Medial Fricative)" },
         
-        { word: "<span class='highlight-target'>बैं</span>गन", img: "baingan.jpg", rawWord: "बैंगन", targetKey: "ब (Initial)" },
-        { word: "क<span class='highlight-target'>बू</span>तर", img: "kabutar_02.jpg", rawWord: "कबूतर", targetKey: "ब (Medial)" },
-        { word: "ज<span class='highlight-target'>ले</span>बी", img: "jalebi_02.jpg", rawWord: "जलेबी", targetKey: "ब (Medial)" },
+        // /b/ (ब)
+        { word: "<span class='highlight-target'>बैं</span>गन", rawHindi: "बैंगन", img: "baingan.jpg", targetKey: "ब (Initial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", rawHindi: "कबूतर", img: "kabutar_02.jpg", targetKey: "ब (Medial)" },
+        { word: "ज<span class='highlight-target'>ले</span>बी", rawHindi: "जलेबी", img: "jalebi_02.jpg", targetKey: "ब (Medial)" },
         
-        { word: "<span class='highlight-target'>भा</span>लू", img: "bhalu_02.jpg", rawWord: "भालू", targetKey: "भ (Initial)" },
-        { word: "ख<span class='highlight-target'>म्भ</span>ा", img: "khambha.jpg", rawWord: "खम्भा", targetKey: "म्भ (Conjunct)" },
+        // /bh/ (भ)
+        { word: "<span class='highlight-target'>भा</span>लू", rawHindi: "भालू", img: "bhalu_02.jpg", targetKey: "भ (Initial)" },
+        { word: "ख<span class='highlight-target'>म्भ</span>ा", rawHindi: "खम्भा", img: "khambha.jpg", targetKey: "म्भ (Conjunct)" },
         
-        { word: "<span class='highlight-target'>म</span>छली", img: "machhli_02.jpg", rawWord: "मछली", targetKey: "म (Initial)" },
-        { word: "ट<span class='highlight-target'>मा</span>टर", img: "tamatar_02.jpg", rawWord: "टमाटर", targetKey: "म (Medial)" },
-        { word: "कल<span class='highlight-target'>म</span>", img: "kalam.jpg", rawWord: "कलम", targetKey: "म (Final)" },
+        // /m/ (म)
+        { word: "<span class='highlight-target'>म</span>छली", rawHindi: "मछली", img: "machhli_02.jpg", targetKey: "म (Initial)" },
+        { word: "ट<span class='highlight-target'>मा</span>टर", rawHindi: "टमाटर", img: "tamatar_02.jpg", targetKey: "म (Medial)" },
+        { word: "कल<span class='highlight-target'>म</span>", rawHindi: "कलम", img: "kalam.jpg", targetKey: "म (Final)" },
         
-        { word: "<span class='highlight-target'>य</span>ज्ञ", img: "yagya.jpg", rawWord: "यज्ञ", targetKey: "य (Initial)" },
-        { word: "चा<span class='highlight-target'>य</span>", img: "chai.jpg", rawWord: "चाय", targetKey: "य (Final)" },
+        // /y/ (य)
+        { word: "<span class='highlight-target'>य</span>ज्ञ", rawHindi: "यज्ञ", img: "yagya.jpg", targetKey: "य (Initial)" },
+        { word: "चा<span class='highlight-target'>य</span>", rawHindi: "चाय", img: "chai.jpg", targetKey: "य (Final)" },
         
-        { word: "<span class='highlight-target'>रे</span>लगाड़ी", img: "relgadi.jpg", rawWord: "रेलगाड़ी", targetKey: "र (Initial)" },
-        { word: "ना<span class='highlight-target'>रि</span>यल", img: "nariyal.jpg", rawWord: "नारियल", targetKey: "र (Medial)" },
-        { word: "ख<span class='highlight-target'>र</span>गोश", img: "khargosh_02.jpg", rawWord: "खरगोश", targetKey: "र (Medial Tap)" },
-        { word: "मट<span class='highlight-target'>र</span>", img: "matar_02.jpg", rawWord: "मटर", targetKey: "र (Final)" },
+        // /r/ (र)
+        { word: "<span class='highlight-target'>रे</span>लगाड़ी", rawHindi: "रेलगाड़ी", img: "relgadi.jpg", targetKey: "र (Initial)" },
+        { word: "ना<span class='highlight-target'>रि</span>यल", rawHindi: "नारियल", img: "nariyal.jpg", targetKey: "र (Medial)" },
+        { word: "ख<span class='highlight-target'>र</span>गोश", rawHindi: "खरगोश", img: "khargosh_02.jpg", targetKey: "र (Medial Tap)" },
+        { word: "मट<span class='highlight-target'>र</span>", rawHindi: "मटर", img: "matar_02.jpg", targetKey: "र (Final)" },
         
-        { word: "<span class='highlight-target'>ल</span>ट्टू", img: "lattoo.jpg", rawWord: "लट्टू", targetKey: "ल (Initial)" },
-        { word: "क<span class='highlight-target'>ल</span>म", img: "kalam_02.jpg", rawWord: "कलम", targetKey: "ल (Medial)" },
-        { word: "त<span class='highlight-target'>ल</span>वार", img: "talwar_02.jpg", rawWord: "तलवार", targetKey: "ल (Medial)" },
-        { word: "उ<span class='highlight-target'>ल्ल</span>ू", img: "ullu_02.jpg", rawWord: "उल्लू", targetKey: "ल्ल् (Geminates)" },
+        // /l/ (ल)
+        { word: "<span class='highlight-target'>ल</span>ट्टू", rawHindi: "लट्टू", img: "lattoo.jpg", targetKey: "ल (Initial)" },
+        { word: "क<span class='highlight-target'>ल</span>म", rawHindi: "कलम", img: "kalam_02.jpg", targetKey: "ल (Medial)" },
+        { word: "त<span class='highlight-target'>ल</span>वार", rawHindi: "तलवार", img: "talwar_02.jpg", targetKey: "ल (Medial)" },
+        { word: "उ<span class='highlight-target'>ल्ल</span>ू", rawHindi: "उल्लू", img: "ullu_02.jpg", targetKey: "ल्ल् (Geminates)" },
         
-        { word: "<span class='highlight-target'>वा</span>नर", img: "bandar.jpg", rawWord: "वानर", targetKey: "व (Initial)" },
-        { word: "ना<span class='highlight-target'>व</span>", img: "naav.jpg", rawWord: "नाव", targetKey: "व (Final)" },
+        // /v/ (व)
+        { word: "<span class='highlight-target'>वा</span>नर", rawHindi: "वानर", img: "bandar.jpg", targetKey: "व (Initial)" },
+        { word: "ना<span class='highlight-target'>व</span>", rawHindi: "नाव", img: "naav.jpg", targetKey: "व (Final)" },
         
-        { word: "<span class='highlight-target'>श</span>हद", img: "shahad.jpg", rawWord: "शहद", targetKey: "श (Initial)" },
-        { word: "म<span class='highlight-target'>शी</span>न", img: "machine.jpg", rawWord: "मशीन", targetKey: "श (Medial)" },
+        // /sh/ (श)
+        { word: "<span class='highlight-target'>श</span>हद", rawHindi: "शहद", img: "shahad.jpg", targetKey: "श (Initial)" },
+        { word: "म<span class='highlight-target'>शी</span>न", rawHindi: "मशीन", img: "machine.jpg", targetKey: "श (Medial)" },
         
-        { word: "<span class='highlight-target'>सू</span>रज", img: "suraj.jpg", rawWord: "सूरज", targetKey: "स (Initial)" },
-        { word: "कि<span class='highlight-target'>सा</span>न", img: "kisan.jpg", rawWord: "किसान", targetKey: "स (Medial)" },
-        { word: "समो<span class='highlight-target'>सा</span>", img: "samosa_02.jpg", rawWord: "समोसा", targetKey: "स (Final)" },
+        // /s/ (स)
+        { word: "<span class='highlight-target'>सू</span>रज", rawHindi: "सूरज", img: "suraj.jpg", targetKey: "स (Initial)" },
+        { word: "कि<span class='highlight-target'>सा</span>न", rawHindi: "किसान", img: "kisan.jpg", targetKey: "स (Medial)" },
+        { word: "समो<span class='highlight-target'>सा</span>", rawHindi: "समोसा", img: "samosa_02.jpg", targetKey: "स (Final)" },
         
-        { word: "<span class='highlight-target'>हा</span>थी", img: "haathi_02.jpg", rawWord: "हाथी", targetKey: "ह (Initial)" },
-        { word: "सिपा<span class='highlight-target'>ही</span>", img: "sipahi.jpg", rawWord: "सिपाही", targetKey: "ह (Medial)" },
+        // /h/ (ह)
+        { word: "<span class='highlight-target'>हा</span>थी", rawHindi: "हाथी", img: "haathi_02.jpg", targetKey: "ह (Initial)" },
+        { word: "सिपा<span class='highlight-target'>ही</span>", rawHindi: "सिपाही", img: "sipahi.jpg", targetKey: "ह (Medial)" },
         
         { type: "header", word: "BLENDS" },
-        { word: "<span class='highlight-target'>क्ष</span>त्रिय", img: "kshatriya.jpg", rawWord: "क्षत्रिय", targetKey: "क्ष (Conjunct Initial)" },
-        { word: "रा<span class='highlight-target'>क्ष</span>स", img: "rakshas.jpg", rawWord: "राक्षस", targetKey: "क्ष (Conjunct Medial)" },
-        { word: "वृ<span class='highlight-target'>क्ष</span>", img: "vriksh.jpg", rawWord: "वृक्ष", targetKey: "क्ष (Conjunct Final)" },
+        // /ksh/ (क्ष)
+        { word: "<span class='highlight-target'>क्ष</span>त्रिय", rawHindi: "क्षत्रिय", img: "kshatriya.jpg", targetKey: "क्ष (Conjunct Initial)" },
+        { word: "रा<span class='highlight-target'>क्ष</span>स", rawHindi: "राक्षस", img: "rakshas.jpg", targetKey: "क्ष (Conjunct Medial)" },
+        { word: "वृ<span class='highlight-target'>क्ष</span>", rawHindi: "वृक्ष", img: "vriksh.jpg", targetKey: "क्ष (Conjunct Final)" },
         
-        { word: "<span class='highlight-target'>त्रि</span>शूल", img: "trishul.jpg", rawWord: "त्रिशूल", targetKey: "त्र (Cluster Initial)" },
-        { word: "क्ष<span class='highlight-target'>त्रि</span>य", img: "kshatriya_02.jpg", rawWord: "क्षत्रिय", targetKey: "त्र (Cluster Medial)" },
-        { word: "प<span class='highlight-target'>त्र</span>", img: "patra.jpg", rawWord: "पत्र", targetKey: "त्र (Cluster Final)" },
+        // /tr/ (त्र)
+        { word: "<span class='highlight-target'>त्रि</span>शूल", rawHindi: "त्रिशूल", img: "trishul.jpg", targetKey: "त्र (Cluster Initial)" },
+        { word: "क्ष<span class='highlight-target'>त्रि</span>य", rawHindi: "क्षत्रिय", img: "kshatriya_02.jpg", targetKey: "त्र (Cluster Medial)" },
+        { word: "प<span class='highlight-target'>त्र</span>", rawHindi: "पत्र", img: "patra.jpg", targetKey: "त्र (Cluster Final)" },
         
-        { word: "य<span class='highlight-target'>ज्ञ</span>", img: "yagya.jpg", rawWord: "यज्ञ", targetKey: "ज्ञ (Conjunct Final)" }
+        // /gy/ (ज्ञ)
+        { word: "य<span class='highlight-target'>ज्ञ</span>", rawHindi: "यज्ञ", img: "yagya.jpg", targetKey: "ज्ञ (Conjunct Final)" }
     ];
 
-    // Response Tracking State indexed by item position
     let clinicianResults = {};
-
     let currentIdx = 0, mediaRecorder, chunks = [], currentBlob = null, currentLabel = "NotLabeled";
     let audioCtx, streamSource, biquadFilter;
 
@@ -325,7 +376,6 @@
         document.getElementById('counter').textContent = `ITEM ${currentIdx + 1} / ${assessmentList.length}`;
         document.getElementById('reviewPanel').style.display = 'none';
         
-        // Restore prior label selection if already reviewed
         currentLabel = clinicianResults[currentIdx]?.soda || "NotLabeled";
         document.querySelectorAll('.review-panel .soda-btn').forEach(btn => {
             btn.classList.toggle('selected', btn.textContent.trim() === currentLabel);
@@ -374,11 +424,10 @@
         document.querySelectorAll('.review-panel .soda-btn').forEach(x => x.classList.remove('selected')); 
         btnElement.classList.add('selected');
 
-        // Persist response into clinical session map
         const item = assessmentList[currentIdx];
         clinicianResults[currentIdx] = {
             itemNumber: currentIdx,
-            word: item.rawWord || item.word.replace(/<[^>]*>/g, ''),
+            wordHindi: item.rawHindi || item.word.replace(/<[^>]*>/g, ''),
             targetKey: item.targetKey || '',
             soda: label,
             timestamp: new Date().toLocaleTimeString()
@@ -396,21 +445,21 @@
         const date = new Date().toISOString().split('T')[0];
         const item = assessmentList[currentIdx];
         
-        const cleanWord = item.rawWord || item.word.replace(/<[^>]*>/g, '');
-        const cleanTarget = item.targetKey ? item.targetKey.replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_') : 'Sound';
+        const cleanWord = (item.rawHindi || item.word).replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_');
+        const cleanTarget = (item.targetKey || 'Target').replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_');
         
         if (currentBlob) {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(currentBlob);
-            link.download = `${name}_${age}_${gender}_Word-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.wav`;
+            link.download = `${name}_${age}_${gender}_Item-${cleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.wav`;
             link.click();
         }
         
-        alert(`Evaluation recorded: ${currentLabel}`);
+        alert(`Evaluation saved: ${currentLabel}`);
     }
 
-    // Client-Side PDF Generation Function
-    function generatePDFReport() {
+    // High-Fidelity Devanagari Native Vector Print/PDF Engine
+    function generateDevanagariReport() {
         const name = document.getElementById('pName').value.trim() || "Unregistered Patient";
         const age = document.getElementById('pAge').value.trim() || "N/A";
         const gender = document.getElementById('pGender').value;
@@ -418,121 +467,127 @@
         const clinician = document.getElementById('pClinician').value.trim() || "N/A";
         const testDate = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        // Header Banner
-        doc.setFillColor(2, 132, 199); // Primary Slate Blue
-        doc.rect(0, 0, 210, 24, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text("PGIMER SPEECH ARTICULATION ASSESSMENT REPORT", 105, 11, { align: 'center' });
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text("Department of Otolaryngology | Clinical SODA Assessment Battery", 105, 18, { align: 'center' });
-
-        // Demographic Summary Card
-        doc.setFillColor(241, 245, 249);
-        doc.roundedRect(14, 28, 182, 28, 3, 3, 'F');
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(9);
-        
-        doc.setFont('helvetica', 'bold'); doc.text("Patient Name:", 18, 35);
-        doc.setFont('helvetica', 'normal'); doc.text(name, 45, 35);
-        doc.setFont('helvetica', 'bold'); doc.text("Age / Gender:", 18, 43);
-        doc.setFont('helvetica', 'normal'); doc.text(`${age} / ${gender}`, 45, 43);
-        doc.setFont('helvetica', 'bold'); doc.text("CR / ID:", 18, 51);
-        doc.setFont('helvetica', 'normal'); doc.text(cr, 45, 51);
-
-        doc.setFont('helvetica', 'bold'); doc.text("Date of Test:", 115, 35);
-        doc.setFont('helvetica', 'normal'); doc.text(testDate, 145, 35);
-        doc.setFont('helvetica', 'bold'); doc.text("Examiner:", 115, 43);
-        doc.setFont('helvetica', 'normal'); doc.text(clinician, 145, 43);
-        doc.setFont('helvetica', 'bold'); doc.text("Test Language:", 115, 51);
-        doc.setFont('helvetica', 'normal'); doc.text("Hindi (Varnamala Sequence)", 145, 51);
-
-        // Aggregate SODA Statistics
         let counts = { Normal: 0, Substitution: 0, Omission: 0, Distortion: 0, Addition: 0, NotTested: 0 };
-        const rows = [];
+        let rowsHtml = '';
         let seq = 1;
 
         assessmentList.forEach((item, idx) => {
             if (item.type === "header") {
-                rows.push([{ content: `--- ${item.word} SECTION ---`, colSpan: 5, styles: { fillColor: [226, 232, 240], fontStyle: 'bold', halign: 'center' } }]);
+                rowsHtml += `
+                    <tr style="background:#e2e8f0; font-weight:bold; text-align:center;">
+                        <td colspan="5" style="padding:8px; font-size:13px; color:#1e293b;">--- ${item.word} SECTION ---</td>
+                    </tr>`;
             } else {
-                const result = clinicianResults[idx];
-                const verdict = result ? result.soda : "Not Evaluated";
+                const res = clinicianResults[idx];
+                const verdict = res ? res.soda : "Not Evaluated";
                 if (counts[verdict] !== undefined) counts[verdict]++;
                 else counts.NotTested++;
 
-                rows.push([
-                    seq++,
-                    item.rawWord || item.word.replace(/<[^>]*>/g, ''),
-                    item.targetKey,
-                    verdict,
-                    result ? result.timestamp : '-'
-                ]);
+                let verdictColor = '#475569';
+                if (verdict === 'Normal') verdictColor = '#16a34a';
+                else if (['Substitution', 'Omission', 'Distortion', 'Addition'].includes(verdict)) verdictColor = '#dc2626';
+
+                rowsHtml += `
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:6px 8px; text-align:center; font-size:12px;">${seq++}</td>
+                        <td style="padding:6px 8px; font-size:15px; font-weight:700; color:#0f172a;">${item.rawHindi || item.word.replace(/<[^>]*>/g, '')}</td>
+                        <td style="padding:6px 8px; font-size:13px; color:#334155;">${item.targetKey}</td>
+                        <td style="padding:6px 8px; font-size:13px; font-weight:700; color:${verdictColor};">${verdict}</td>
+                        <td style="padding:6px 8px; text-align:center; font-size:12px; color:#64748b;">${res ? res.timestamp : '-'}</td>
+                    </tr>`;
             }
         });
 
-        // Summary Metric Mini-Table
-        doc.autoTable({
-            startY: 59,
-            head: [['Evaluated Metric', 'Normal', 'Substitution (S)', 'Omission (O)', 'Distortion (D)', 'Addition (A)', 'Not Tested']],
-            body: [[
-                'Counts',
-                counts.Normal,
-                counts.Substitution,
-                counts.Omission,
-                counts.Distortion,
-                counts.Addition,
-                counts.NotTested
-            ]],
-            theme: 'grid',
-            headStyles: { fillColor: [15, 23, 42], fontSize: 8, halign: 'center' },
-            bodyStyles: { fontSize: 8, halign: 'center', fontStyle: 'bold' },
-            margin: { left: 14, right: 14 }
-        });
+        const reportArea = document.getElementById('reportPrintArea');
+        reportArea.innerHTML = `
+            <div style="padding:20px; color:#0f172a; max-width:850px; margin:auto;">
+                <!-- Header -->
+                <div style="background:#0284c7; color:white; padding:15px; border-radius:12px; text-align:center; margin-bottom:15px;">
+                    <h2 style="margin:0; font-size:20px; font-weight:800; letter-spacing:0.5px;">SPEECH ARTICULATION ASSESSMENT CLINICAL REPORT</h2>
+                    <p style="margin:4px 0 0 0; font-size:12px; opacity:0.95;">Standardized Hindi Articulation & Phonological Battery (SODA Analysis)</p>
+                </div>
 
-        // Detailed Stimuli Response Grid
-        doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 5,
-            head: [['#', 'Stimulus Word', 'Target Phoneme & Position', 'SODA Judgment', 'Time Recorded']],
-            body: rows,
-            theme: 'striped',
-            headStyles: { fillColor: [2, 132, 199], fontSize: 8 },
-            bodyStyles: { fontSize: 8 },
-            columnStyles: {
-                0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 35 },
-                2: { cellWidth: 60 },
-                3: { cellWidth: 42, fontStyle: 'bold' },
-                4: { cellWidth: 35, halign: 'center' }
-            },
-            didParseCell: function(data) {
-                if (data.column.index === 3) {
-                    if (data.cell.raw === 'Normal') data.cell.styles.textColor = [16, 185, 129];
-                    else if (['Substitution', 'Omission', 'Distortion', 'Addition'].includes(data.cell.raw)) {
-                        data.cell.styles.textColor = [220, 38, 38];
-                    }
-                }
-            },
-            margin: { left: 14, right: 14 }
-        });
+                <!-- Patient & Session Information -->
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 16px; margin-bottom:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px;">
+                    <div><strong>Patient Name (मरीज का नाम):</strong> ${name}</div>
+                    <div><strong>Date of Test (दिनांक):</strong> ${testDate}</div>
+                    <div><strong>Age / Gender (आयु / लिंग):</strong> ${age} / ${gender}</div>
+                    <div><strong>Examiner (परीक्षक):</strong> ${clinician}</div>
+                    <div><strong>CR / Patient ID:</strong> ${cr}</div>
+                    <div><strong>Test Battery:</strong> Hindi Varnamala (I-M-F Order)</div>
+                </div>
 
-        // Footer / Signature Section
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(7);
-            doc.setTextColor(148, 163, 184);
-            doc.text(`Page ${i} of ${pageCount} | Generated via PGIMER Articulation Assessment Tool`, 105, 290, { align: 'center' });
-        }
+                <!-- Metric Summary Box -->
+                <table style="width:100%; border-collapse:collapse; margin-bottom:15px; font-size:12px; text-align:center;">
+                    <thead>
+                        <tr style="background:#0f172a; color:white;">
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Evaluated Metric</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Normal</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Substitution (S)</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Omission (O)</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Distortion (D)</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Addition (A)</th>
+                            <th style="padding:6px; border:1px solid #cbd5e1;">Not Evaluated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background:#f1f5f9; font-weight:bold;">
+                            <td style="padding:6px; border:1px solid #cbd5e1;">Total Counts</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#16a34a;">${counts.Normal}</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#dc2626;">${counts.Substitution}</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#dc2626;">${counts.Omission}</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#dc2626;">${counts.Distortion}</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#dc2626;">${counts.Addition}</td>
+                            <td style="padding:6px; border:1px solid #cbd5e1; color:#64748b;">${counts.NotTested}</td>
+                        </tr>
+                    </tbody>
+                </table>
 
-        // Trigger Direct PDF Download
-        const cleanName = name.replace(/\s+/g, '_');
-        doc.save(`Articulation_Report_${cleanName}_${testDate.replace(/\s+/g, '_')}.pdf`);
+                <!-- Main Assessment Data Table in Devanagari -->
+                <table style="width:100%; border-collapse:collapse; text-align:left;">
+                    <thead>
+                        <tr style="background:#0284c7; color:white; font-size:13px;">
+                            <th style="padding:8px; width:6%; text-align:center;">#</th>
+                            <th style="padding:8px; width:28%;">Stimulus Word (शब्द)</th>
+                            <th style="padding:8px; width:34%;">Target Phoneme & Position (लक्षित ध्वनि)</th>
+                            <th style="padding:8px; width:18%;">SODA Judgment</th>
+                            <th style="padding:8px; width:14%; text-align:center;">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+
+                <div style="margin-top:20px; font-size:11px; text-align:center; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:8px;">
+                    Generated via PGIMER Articulation Assessment Clinical Diagnostic Tool
+                </div>
+            </div>
+        `;
+
+        // Render clean print frame without page break glitches
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Articulation_Report_${name.replace(/\s+/g, '_')}_${testDate}</title>
+                    <style>
+                        body { margin: 0; padding: 10px; font-family: system-ui, -apple-system, "Noto Sans Devanagari", "Mangal", sans-serif; }
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${reportArea.innerHTML}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+        }, 350);
     }
 
     window.onload = updateUI;
