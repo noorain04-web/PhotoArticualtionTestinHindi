@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PGIMER Articulation - Global ID Mode</title>
+    <style>
+        :root { 
+            --primary: #0284c7; 
+            --bg: #f8fafc; 
+            --text: #0f172a; 
+            --target-accent: #f59e0b;
+            --highlight-color: #ef4444; /* Vivid red for active diagnostic phone */
+        }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 450px; background: #fff; padding: 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box; }
+        
+        /* Persistent Metadata Header */
+        .session-info { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 10px; border-radius: 12px; margin-bottom: 15px; width: 100%; text-align: center; border: 1px solid #e2e8f0; display: none; }
+        
+        /* Registration form - only on first page */
+        .registration-box { background: #f1f5f9; padding: 15px; border-radius: 18px; margin-bottom: 20px; border: 2px solid var(--primary); }
+        .meta-input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        
+        .stimulus-box { width: 100%; height: 280px; background: #f8fafc; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 15px; border: 1px dashed #cbd5e1; overflow: hidden; position: relative; }
+        .stimulus-image { max-width: 85%; max-height: 60%; object-fit: contain; }
+        
+        /* Primary Text Display styling */
+        .target-word { font-size: 2.5rem; font-weight: 800; margin-top: 5px; color: var(--text); letter-spacing: 1px; }
+        .header-card { font-size: 3rem; font-weight: 900; color: #ef4444; }
+        
+        /* Dynamic Red Target Sound Highlight class */
+        .highlight-target {
+            color: var(--highlight-color) !important;
+            font-weight: 900;
+            text-shadow: 0px 0px 1px rgba(239, 68, 68, 0.2);
+        }
+        
+        /* Target Sound Position Indicator Badge */
+        .target-sound-badge {
+            background: var(--target-accent);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+        
+        .btn-record { background: #ef4444; color: white; width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: 700; cursor: pointer; }
+        .recording { background: #991b1b !important; animation: pulse 1.5s infinite; }
+        .review-panel { background: #f0fdf4; border: 2px solid #10b981; padding: 15px; border-radius: 18px; display: none; margin-top: 15px; }
+        .soda-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+        .soda-btn { background: white; border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px; font-size: 0.85rem; text-align: center; cursor: pointer; }
+        .soda-btn.selected { background: var(--primary); color: white; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="sessionDisplay" class="session-info"></div>
+
+    <div style="text-align:center; font-size:0.75rem; font-weight:bold; color:#64748b; margin-bottom:10px;" id="counter">ITEM 1 / 113</div>
+
+    <div class="stimulus-box" id="mainDisplay">
+        <div id="regForm" class="registration-box">
+            <span style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">NEW PATIENT REGISTRATION</span>
+            <input type="text" id="pName" class="meta-input" placeholder="Patient Name (Mandatory)">
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="pAge" class="meta-input" placeholder="Age">
+                <select id="pGender" class="meta-input"><option value="M">Male</option><option value="F">Female</option></select>
+            </div>
+            <p style="font-size:0.65rem; color:#64748b; margin:5px 0 0 0;">*Details will apply to all 112 stimuli.</p>
+        </div>
+        
+        <div id="targetSoundBadge" class="target-sound-badge"></div>
+        <img id="displayImg" src="" class="stimulus-image" style="display:none;">
+        <div id="displayText" class="target-word"></div>
+    </div>
+
+    <div style="display:flex; gap:10px; width:100%; margin-bottom:15px;">
+        <button class="soda-btn" style="flex:1" onclick="changeItem(-1)">PREV</button>
+        <button class="soda-btn" style="flex:1" onclick="changeItem(1)">NEXT</button>
+    </div>
+
+    <button id="recordBtn" class="btn-record" style="display:none;" onclick="handleRecording()">🎙️ RECORD SAMPLE</button>
+
+    <div id="reviewPanel" class="review-panel">
+        <button class="soda-btn" style="width:100%; background:#0f172a; color:white; margin-bottom:10px;" onclick="playCurrent()">▶️ PREVIEW</button>
+        <div class="soda-grid">
+            <div class="soda-btn" onclick="setLabel('Normal', this)">Normal</div>
+            <div class="soda-btn" onclick="setLabel('Substitution', this)">Substitution</div>
+            <div class="soda-btn" onclick="setLabel('Omission', this)">Omission</div>
+            <div class="soda-btn" onclick="setLabel('Distortion', this)">Distortion</div>
+            <div class="soda-btn" onclick="setLabel('Addition', this)">Addition</div>
+        </div>
+        <button class="btn-record" style="background:#10b981; margin:0;" onclick="finalizeSave()">💾 SAVE SAMPLE</button>
+    </div>
+</div>
+
+<script>
+    // Configured assessment list embedding HTML red span structures for pinpoint text highlighting
+    const assessmentList = [
+        { type: "header", word: "VOWELS" },
+        { word: "<span class='highlight-target'>अ</span>नार", img: "page3.jpg", targetKey: "अ (Initial)" }, 
+        { word: "<span class='highlight-target'>आ</span>म", img: "page4.jpg", targetKey: "आ (Initial)" },
+        { word: "म<span class='highlight-target'>ट</span>र", img: "page5.jpg", targetKey: "अ (Medial)" }, 
+        { word: "ब<span class='highlight-target'>स</span>", img: "page6.jpg", targetKey: "अ (Final Schwa)" },
+        { word: "छा<span class='highlight-target'>ता</span>", img: "page7.jpg", targetKey: "आ (Final)" }, 
+        { word: "<span class='highlight-target'>इ</span>मली", img: "page8.jpg", targetKey: "इ (Initial)" },
+        { word: "ब<span class='highlight-target'>गी</span>चा", img: "page9.jpg", targetKey: "ई (Medial)" }, 
+        { word: "त<span class='highlight-target'>कि</span>या", img: "page10.jpg", targetKey: "इ (Medial)" },
+        { word: "ज<span class='highlight-target'>ले</span>बी", img: "page11.jpg", targetKey: "ए (Medial)" }, 
+        { word: "<span class='highlight-target'>ती</span>न", img: "page12.jpg", targetKey: "ई (Medial)" },
+        { word: "<span class='highlight-target'>उ</span>ल्लू", img: "page13.jpg", targetKey: "उ (Initial)" }, 
+        { word: "सा<span class='highlight-target'>बु</span>न", img: "page14.jpg", targetKey: "उ (Medial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", img: "page15.jpg", targetKey: "ऊ (Medial)" }, 
+        { word: "सा<span class='highlight-target'>धु</span>", img: "page16.jpg", targetKey: "उ (Final)" },
+        { word: "भा<span class='highlight-target'>लू</span>", img: "page17.jpg", targetKey: "ऊ (Final)" }, 
+        { word: "<span class='highlight-target'>ऊँ</span>ट", img: "page18.jpg", targetKey: "ऊँ (Anunasika Initial)" },
+        { word: "पे<span class='highlight-target'>ड़</span>", img: "page19.jpg", targetKey: "ए (Medial)" }, 
+        { word: "<span class='highlight-target'>ओ</span>खली", img: "page20.jpg", targetKey: "ओ (Initial)" },
+        { word: "गुब्बा<span class='highlight-target'>रे</span>", img: "page21.jpg", targetKey: "ए (Final)" }, 
+        { word: "स<span class='highlight-target'>मो</span>सा", img: "page22.jpg", targetKey: "ओ (Medial)" },
+        { word: "<span class='highlight-target'>ऐ</span>नक", img: "page23.jpg", targetKey: "ऐ (Initial)" }, 
+        { word: "क<span class='highlight-target'>ौ</span>आ", img: "page24.jpg", targetKey: "औ (Medial)" },
+        { word: "<span class='highlight-target'>अं</span>गूर", img: "page25.jpg", targetKey: "अं (Anusvara Initial)" }, 
+        { word: "खि<span class='highlight-target'>लौ</span>ना", img: "page26.jpg", targetKey: "औ (Medial)" },
+        { word: "प<span class='highlight-target'>तं</span>ग", img: "page27.jpg", targetKey: "अं (Anusvara Medial)" },
+        
+        { type: "header", word: "CONSONANTS" },
+        { word: "<span class='highlight-target'>क</span>मल", img: "page29.jpg", targetKey: "क (Initial)" }, 
+        { word: "<span class='highlight-target'>ख</span>रगोश", img: "page30.jpg", targetKey: "ख (Initial)" },
+        { word: "ब<span class='highlight-target'>क</span>री", img: "page31.jpg", targetKey: "क (Medial)" }, 
+        { word: "ओ<span class='highlight-target'>ख</span>ली", img: "page32.jpg", targetKey: "ख (Medial)" },
+        { word: "में<span class='highlight-target'>ढ</span>क", img: "page33.jpg", targetKey: "ढ (Medial)" }, 
+        { word: "बत्त<span class='highlight-target'>ख</span>", img: "page34.jpg", targetKey: "ख (Final)" },
+        { word: "<span class='highlight-target'>गा</span>जर", img: "page35.jpg", targetKey: "ग (Initial)" }, 
+        { word: "म<span class='highlight-target'>ग</span>रमच्छ", img: "page36.jpg", targetKey: "ग (Medial)" },
+        { word: "<span class='highlight-target'>घा</span>घरा", img: "page37.jpg", targetKey: "घ (Initial)" }, 
+        { word: "पत<span class='highlight-target'>ग</span>", img: "page38.jpg", targetKey: "ग (Final)" },
+        { word: "कं<span class='highlight-target'>घा</span>", img: "page39.jpg", targetKey: "घ (Medial)" }, 
+        { word: "<span class='highlight-target'>च</span>प्पल", img: "page40.jpg", targetKey: "च (Initial)" },
+        { word: "<span class='highlight-target'>छा</span>ता", img: "page41.jpg", targetKey: "छ (Initial)" }, 
+        { word: "ना<span class='highlight-target'>च</span>ना", img: "page42.jpg", targetKey: "च (Medial)" },
+        { word: "म<span class='highlight-target'>छ</span>ली", img: "page43.jpg", targetKey: "छ (Medial)" }, 
+        { word: "ब<span class='highlight-target'>च्चा</span>", img: "page44.jpg", targetKey: "च्च (Geminates)" },
+        { word: "मगरम<span class='highlight-target'>च्छ</span>", img: "page45.jpg", targetKey: "छ (Final)" }, 
+        { word: "<span class='highlight-target'>ज</span>हाज", img: "page46.jpg", targetKey: "ज (Initial)" },
+        { word: "<span class='highlight-target'>झं</span>डा", img: "page47.jpg", targetKey: "झ (Initial)" }, 
+        { word: "गा<span class='highlight-target'>ज</span>र", img: "page48.jpg", targetKey: "ज (Medial)" },
+        { word: "<span class='highlight-target'>ट</span>माटर", img: "page49.jpg", targetKey: "ट (Initial)" }, 
+        { word: "ब<span class='highlight-target'>ट</span>न", img: "page50.jpg", targetKey: "ट (Medial)" },
+        { word: "ऊँ<span class='highlight-target'>ट</span>", img: "page51.jpg", targetKey: "ट (Final)" }, 
+        { word: "अंगू<span class='highlight-target'>ठी</span>", img: "page52.jpg", targetKey: "ठ (Final Vowel Position)" },
+        { word: "<span class='highlight-target'>ठ</span>ठेरा", img: "page53.jpg", targetKey: "ठ (Initial)" }, 
+        { word: "<span class='highlight-target'>ड</span>मरू", img: "page54.jpg", targetKey: "ड (Initial)" },
+        { word: "मि<span class='highlight-target'>ठा</span>ई", img: "page55.jpg", targetKey: "ठ (Medial)" }, 
+        { word: "झं<span class='highlight-target'>डा</span>", img: "page56.jpg", targetKey: "ड (Medial)" },
+        { word: "<span class='highlight-target'>ढो</span>लक", img: "page57.jpg", targetKey: "ढ (Initial)" }, 
+        { word: "ब<span class='highlight-target'>त्त</span>ख", img: "page58.jpg", targetKey: "त (Medial Geminate Feature)" },
+        { word: "मेंढ<span class='highlight-target'>क</span>", img: "page59.jpg", targetKey: "क (Final)" }, 
+        { word: "<span class='highlight-target'>दां</span>त", img: "page60.jpg", targetKey: "द (Initial)" },
+        { word: "<span class='highlight-target'>त</span>लवार", img: "page61.jpg", targetKey: "त (Initial)" }, 
+        { word: "<span class='highlight-target'>थ</span>रमस", img: "page62.jpg", targetKey: "थ (Initial)" },
+        { word: "ह<span class='highlight-target'>थे</span>ली", img: "page63.jpg", targetKey: "थ (Medial)" }, 
+        { word: "म<span class='highlight-target'>दा</span>री", img: "page64.jpg", targetKey: "द (Medial)" },
+        { word: "हा<span class='highlight-target'>थी</span>", img: "page65.jpg", targetKey: "थ (Final Dental Fricative Map)" }, 
+        { word: "अमरु<span class='highlight-target'>द</span>", img: "page66.jpg", targetKey: "द (Final)" },
+        { word: "<span class='highlight-target'>ध</span>नुष", img: "page67.jpg", targetKey: "ध (Initial)" }, 
+        { word: "ग<span class='highlight-target'>धा</span>", img: "page68.jpg", targetKey: "ध (Medial)" },
+        { word: "का<span class='highlight-target'>न</span>", img: "page69.jpg", targetKey: "न (Final)" }, 
+        { word: "<span class='highlight-target'>न</span>ल", img: "page70.jpg", targetKey: "न (Initial)" },
+        { word: "प<span class='highlight-target'>पी</span>ता", img: "page71.jpg", targetKey: "प (Medial)" }, 
+        { word: "ऐ<span class='highlight-target'>न</span>क", img: "page72.jpg", targetKey: "न (Medial)" },
+        { word: "च<span class='highlight-target'>प्प</span>ल", img: "page73.jpg", targetKey: "प्प (Medial Geminate)" }, 
+        { word: "सां<span class='highlight-target'>प</span>", img: "page74.jpg", targetKey: "प (Final)" },
+        { word: "सो<span class='highlight-target'>फ़ा</span>", img: "page75.jpg", targetKey: "फ़ (Medial Labiodental Map)" }, 
+        { word: "<span class='highlight-target'>फू</span>ल", img: "page76.jpg", targetKey: "फ (Initial)" },
+        { word: "<span class='highlight-target'>बैं</span>गन", img: "page77.jpg", targetKey: "ब (Initial)" }, 
+        { word: "ढ<span class='highlight-target'>फ</span>ली", img: "page78.jpg", targetKey: "फ (Medial)" },
+        { word: "क<span class='highlight-target'>बू</span>तर", img: "page79.jpg", targetKey: "ब (Medial Consonant Mode)" }, 
+        { word: "ज<span class='highlight-target'>ले</span>बी", img: "page80.jpg", targetKey: "ब (Medial Bilabial Feature)" },
+        { word: "<span class='highlight-target'>म</span>छली", img: "page81.jpg", targetKey: "म (Initial)" }, 
+        { word: "<span class='highlight-target'>भा</span>लू", img: "page82.jpg", targetKey: "भ (Initial)" },
+        { word: "ट<span class='highlight-target'>मा</span>टर", img: "page83.jpg", targetKey: "म (Medial)" }, 
+        { word: "ख<span class='highlight-target'>म्भ</span>ा", img: "page84.jpg", targetKey: "म्भ (Medial Conjunct Homorganic)" },
+        { word: "कल<span class='highlight-target'>म</span>", img: "page85.jpg", targetKey: "म (Final)" }, 
+        { word: "<span class='highlight-target'>य</span>ज्ञ", img: "page86.jpg", targetKey: "य (Initial)" },
+        { word: "<span class='highlight-target'>रे</span>लगाड़ी", img: "page87.jpg", targetKey: "र (Initial)" }, 
+        { word: "ना<span class='highlight-target'>रि</span>यल", img: "page88.jpg", targetKey: "र (Medial)" },
+        { word: "ख<span class='highlight-target'>र</span>गोश", img: "page89.jpg", targetKey: "र (Medial Tap Position)" }, 
+        { word: "चा<span class='highlight-target'>य</span>", img: "page90.jpg", targetKey: "य (Final Semivowel)" },
+        { word: "मट<span class='highlight-target'>र</span>", img: "page91.jpg", targetKey: "र (Final)" }, 
+        { word: "<span class='highlight-target'>ल</span>ट्टू", img: "page92.jpg", targetKey: "ल (Initial)" },
+        { word: "<span class='highlight-target'>वा</span>नर", img: "page93.jpg", targetKey: "व (Initial)" }, 
+        { word: "क<span class='highlight-target'>ल</span>म", img: "page94.jpg", targetKey: "ल (Medial)" },
+        { word: "त<span class='highlight-target'>ल</span>वार", img: "page95.jpg", targetKey: "ल (Medial Lateral Position)" }, 
+        { word: "उ<span class='highlight-target'>ल्ल</span>ू", img: "page96.jpg", targetKey: "ल्लू (Medial Alveolar Geminate)" },
+        { word: "ना<span class='highlight-target'>व</span>", img: "page97.jpg", targetKey: "व (Final)" }, 
+        { word: "<span class='highlight-target'>सू</span>रज", img: "page99.jpg", targetKey: "स (Initial)" },
+        { word: "म<span class='highlight-target'>शी</span>न", img: "page100.jpg", targetKey: "श (Medial Palatal Sibilant)" }, 
+        { word: "कि<span class='highlight-target'>सा</span>न", img: "page101.jpg", targetKey: "स (Medial)" },
+        { word: "स<span class='highlight-target'>मो</span>सा", img: "page102.jpg", targetKey: "म (Medial Consonant Position)" }, 
+        { word: "<span class='highlight-target'>हा</span>थी", img: "page103.jpg", targetKey: "ह (Initial)" },
+        { word: "<span class='highlight-target'>श</span>हद", img: "page104.jpg", targetKey: "श (Initial)" }, 
+        { word: "सि<span class='highlight-target'>पा</span>ही", img: "page105.jpg", targetKey: "प (Medial Bilabial Map)" },
+        
+        { type: "header", word: "BLENDS" },
+        { word: "<span class='highlight-target'>क्ष</span>त्रिय", img: "page106.jpg", targetKey: "क्ष (Conjunct Initial)" }, 
+        { word: "वृ<span class='highlight-target'>क्ष</span>", img: "page107.jpg", targetKey: "क्ष (Conjunct Final)" },
+        { word: "रा<span class='highlight-target'>क्ष</span>स", img: "page108.jpg", targetKey: "क्ष (Conjunct Medial)" }, 
+        { word: "<span class='highlight-target'>त्रि</span>शूल", img: "page109.jpg", targetKey: "त्रि (Cluster Initial)" },
+        { word: "क्ष<span class='highlight-target'>त्रि</span>य", img: "page110.jpg", targetKey: "त्रि (Cluster Medial)" }, 
+        { word: "प<span class='highlight-target'>त्र</span>", img: "page111.jpg", targetKey: "त्र (Cluster Final)" },
+        { word: "य<span class='highlight-target'>ज्ञ</span>", img: "page112.jpg", targetKey: "ज्ञ (Conjunct Final)" }
+    ];
+
+    let currentIdx = 0, mediaRecorder, chunks = [], currentBlob = null, currentLabel = "NotLabeled";
+    let audioCtx, streamSource, biquadFilter;
+
+    function checkMetadata() {
+        const name = document.getElementById('pName').value.trim();
+        const age = document.getElementById('pAge').value.trim();
+        const gender = document.getElementById('pGender').value;
+        const display = document.getElementById('sessionDisplay');
+
+        if (name !== "") {
+            display.style.display = "block";
+            display.textContent = `ACTIVE SESSION: ${name} (${age || 'N/A'}, ${gender})`;
+            return true;
+        }
+        return false;
+    }
+
+    function changeItem(step) {
+        if (step > 0 && currentIdx === 0 && !checkMetadata()) {
+            alert("Mandatory: Please enter Patient Name to begin.");
+            return;
+        }
+        currentIdx = (currentIdx + step + assessmentList.length) % assessmentList.length;
+        updateUI();
+    }
+
+    function updateUI() {
+        const item = assessmentList[currentIdx];
+        const dImg = document.getElementById('displayImg');
+        const dTxt = document.getElementById('displayText');
+        const rBtn = document.getElementById('recordBtn');
+        const reg = document.getElementById('regForm');
+        const badge = document.getElementById('targetSoundBadge');
+        
+        if (currentIdx === 0) {
+            reg.style.display = "block";
+            dImg.style.display = "none";
+            badge.style.display = "none";
+            dTxt.innerHTML = `<span class="header-card">${item.word}</span>`;
+            rBtn.style.display = "none";
+        } else if (item.type === "header") {
+            reg.style.display = "none";
+            dImg.style.display = "none";
+            badge.style.display = "none";
+            dTxt.innerHTML = `<span class="header-card">${item.word}</span>`;
+            rBtn.style.display = "none";
+        } else {
+            reg.style.display = "none";
+            dImg.style.display = "block"; 
+            dImg.src = item.img;
+            
+            // Evaluates text payload as HTML content to register the color-coded span formatting structure
+            dTxt.innerHTML = item.word; 
+            rBtn.style.display = "block";
+            
+            if(item.targetKey) {
+                badge.style.display = "block";
+                badge.textContent = `🎯 Target Sound: ${item.targetKey}`;
+            } else {
+                badge.style.display = "none";
+            }
+        }
+        
+        document.getElementById('counter').textContent = `ITEM ${currentIdx + 1} / ${assessmentList.length}`;
+        document.getElementById('reviewPanel').style.display = 'none';
+        currentBlob = null; currentLabel = "NotLabeled";
+    }
+
+    async function handleRecording() {
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 } 
+                });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+                streamSource = audioCtx.createMediaStreamSource(stream);
+                biquadFilter = audioCtx.createBiquadFilter();
+                biquadFilter.type = "highpass";
+                biquadFilter.frequency.value = 80; 
+
+                const dest = audioCtx.createMediaStreamDestination();
+                streamSource.connect(biquadFilter).connect(dest);
+
+                mediaRecorder = new MediaRecorder(dest.stream);
+                chunks = [];
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = () => { 
+                    currentBlob = new Blob(chunks, { type: 'audio/wav' }); 
+                    document.getElementById('reviewPanel').style.display = 'block'; 
+                };
+
+                mediaRecorder.start();
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('recordBtn').textContent = "⏹️ STOP RECORDING";
+                document.getElementById('reviewPanel').style.display = 'none';
+            } catch (err) { alert("Mic Access Error: " + err.message); }
+        } else {
+            mediaRecorder.stop();
+            audioCtx.close();
+            document.getElementById('recordBtn').classList.remove('recording');
+            document.getElementById('recordBtn').textContent = "🎙️ RECORD SAMPLE";
+        }
+    }
+
+    function setLabel(l, b) { 
+        currentLabel = l; 
+        document.querySelectorAll('.review-panel .soda-btn').forEach(x => x.classList.remove('selected')); 
+        b.classList.add('selected'); 
+    }
+    
+    function playCurrent() { if(currentBlob) new Audio(URL.createObjectURL(currentBlob)).play(); }
+
+    function finalizeSave() {
+        const name = document.getElementById('pName').value.replace(/\s+/g, '_');
+        const age = document.getElementById('pAge').value || 'NA';
+        const gender = document.getElementById('pGender').value;
+        const date = new Date().toISOString().split('T')[0];
+        const item = assessmentList[currentIdx];
+        
+        // Strip out HTML tags to secure clean plaintext string profiles for local storage naming paths
+        const secureCleanWord = item.word.replace(/<[^>]*>/g, '');
+        const cleanTarget = item.targetKey ? item.targetKey.replace(/[^a-zA-Z0-9\u0900-\u097F]/g, '_') : 'Sound';
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(currentBlob);
+        
+        link.download = `${name}_${age}_${gender}_Word-${secureCleanWord}_Target-${cleanTarget}_${currentLabel}_${date}.wav`;
+        link.click();
+    }
+
+    window.onload = updateUI;
+</script>
+</body>
+</html>
